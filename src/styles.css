@@ -1,3 +1,28 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import "tailwindcss";
+@theme {
+  /* Olive — couleur principale */
+  --color-olive-50:  #f4f6e8;
+  --color-olive-200: #dde4b0;
+  --color-olive-500: #8a9e3a;
+  --color-olive-700: #5f6e27;
+  --color-olive-900: #3a4418;
+
+  /* Harvest — maturité & KPI */
+  --color-harvest-50:  #fef9ec;
+  --color-harvest-200: #fde9a2;
+  --color-harvest-400: #f5b731;
+  --color-harvest-600: #c47c18;
+  --color-harvest-800: #7c4c0a;
+
+  /* Terre — fonds & surfaces */
+  --color-earth-bg:     #faf8f4;
+  --color-earth-card:   #f0ece3;
+  --color-earth-border: #d6ceb8;
+  --color-earth-muted:  #8c7d62;
+  --color-earth-text:   #3d3225;
+
+  /* Alertes */
+  --color-alert-500: #ef4444;
+}
