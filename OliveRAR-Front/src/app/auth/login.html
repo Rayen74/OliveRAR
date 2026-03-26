@@ -49,7 +49,7 @@
             <label class="text-xs font-medium text-earth-text">
               Mot de passe
             </label>
-            <a href="#" class="text-xs text-olive-500 hover:text-olive-700 transition-colors">
+            <a routerLink="/forgot-password" class="text-xs text-olive-500 hover:text-olive-700 transition-colors">
               Mot de passe oublié ?
             </a>
           </div>
@@ -87,6 +87,14 @@
         </button>
 
       </form>
+
+      <!-- Create account link -->
+      <p class="text-sm text-center text-earth-muted mt-6">
+        Créez votre compte ici :
+        <a routerLink="/create-account" class="text-olive-500 hover:text-olive-700 font-medium transition-colors">
+          Créer un compte
+        </a>
+      </p>
     </div>
 
     <!-- Footer -->
