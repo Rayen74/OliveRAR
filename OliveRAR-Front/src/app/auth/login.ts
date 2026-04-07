@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { AuthService, AuthResponse } from './auth.service';
 
 @Component({
   selector: 'app-login',
@@ -25,6 +26,23 @@ import { Router, RouterLink } from '@angular/router';
       opacity: 0;
       animation: crossfade 25s linear infinite;
     }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fade-in 0.3s ease-out forwards;
+    }
+    .toast-success {
+      background-color: #f0fdf4 !important;
+      border-color: #bbf7d0 !important;
+      color: #166534 !important;
+    }
+    .toast-error {
+      background-color: #fef2f2 !important;
+      border-color: #fecaca !important;
+      color: #991b1b !important;
+    }
   `]
 })
 export class LoginComponent {
@@ -34,6 +52,12 @@ export class LoginComponent {
   errorMsg = '';
   showPwd = false;
 
+  toast: { message: string, type: 'success' | 'error', show: boolean } = {
+    message: '',
+    type: 'success',
+    show: false
+  };
+
   photos = [
     '/images/1.png',
     '/images/2.png',
@@ -42,10 +66,19 @@ export class LoginComponent {
     '/images/5.png'
   ];
 
-  constructor(private fb: FormBuilder, private router: Router) {
+  constructor(
+    private fb: FormBuilder,
+    private router: Router,
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+    // ✅ FIX: Removed NgZone — HTTP observables already run inside Angular's zone.
+    //         Using ngZone.run() when already inside the zone caused a timing conflict
+    //         where detectChanges() fired before the property assignment was committed,
+    //         so the toast silently failed to render.
+  ) {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      email: [''],
+      password: ['']
     });
   }
 
@@ -54,10 +87,64 @@ export class LoginComponent {
 
   togglePwd() { this.showPwd = !this.showPwd; }
 
+  // ✅ FIX: Simplified showNotification — no more ngZone.run() wrapper.
+  //         Sets toast state directly, then calls detectChanges() to force the view update
+  //         synchronously. The previous ngZone.run() approach was redundant inside HTTP
+  //         callbacks and caused the toast assignment to be skipped in the error path.
+  showNotification(message: string, type: 'success' | 'error') {
+    this.toast = { message, type, show: true };
+    this.cdr.detectChanges();
+
+    setTimeout(() => {
+      this.toast.show = false;
+      this.cdr.detectChanges();
+    }, 4000);
+  }
+
   onSubmit() {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
+    if (!this.loginForm.value.email || !this.loginForm.value.password) {
+      this.showNotification('Veuillez remplir tous les champs.', 'error');
       return;
     }
+
+    this.loading = true;
+    this.errorMsg = '';
+
+    const credentials = this.loginForm.value;
+    console.log('Initiating login for:', credentials.email);
+
+    this.authService.login(credentials).subscribe({
+      next: (response: AuthResponse) => {
+        console.log('[Login] Complete Response:', response);
+        this.loading = false;
+        this.cdr.detectChanges();
+
+        if (response.success) {
+          console.log('[Login] Success detected');
+          localStorage.setItem('user', JSON.stringify(response.user));
+          this.showNotification('Connexion réussie ! Bienvenue.', 'success');
+          setTimeout(() => {
+            this.router.navigate(['/pages/dashboard']);
+          }, 1500);
+        } else {
+          console.warn('Login failed for:', credentials.email, '-', response.message);
+          this.showNotification(response.message || 'Échec de la connexion.', 'error');
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        // ✅ FIX: Added detectChanges() here so the spinner is dismissed BEFORE
+        //         the toast is shown. Without this, loading stayed true while
+        //         showNotification ran, leaving the UI stuck on the spinner
+        //         and making the toast appear to do nothing.
+        this.cdr.detectChanges();
+        console.error('Login error for:', credentials.email, err);
+        const backendMessage = err?.error?.message;
+        this.showNotification(
+          backendMessage || 'Une erreur est survenue lors de la connexion. Veuillez réessayer.',
+          'error'
+        );
+      }
+    });
   }
 }
