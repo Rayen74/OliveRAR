@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -23,9 +24,11 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody User loginUser) {
         try {
             User user = authService.login(loginUser);
+            String token = UUID.randomUUID().toString();
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Connexion réussie",
+                    "token", token,
                     "user", user
             ));
         } catch (RuntimeException e) {

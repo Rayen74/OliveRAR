@@ -1,0 +1,87 @@
+<div class="flex min-h-screen bg-earth-bg">
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8">
+    <header class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Tableau de Bord</h1>
+        <p class="text-earth-muted text-sm">Vue d'ensemble de la campagne oléicole 2026</p>
+      </div>
+      <div class="flex gap-3">
+        <a routerLink="/responsable/users" class="px-4 py-2 bg-earth-text text-white rounded-lg hover:opacity-90 transition-colors">
+          Gérer Utilisateurs
+        </a>
+        <button class="px-4 py-2 bg-olive-500 text-white rounded-lg hover:bg-olive-700 transition-colors">
+          Nouvelle Collecte
+        </button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div class="p-6 bg-white border border-earth-border rounded-xl shadow-sm">
+        <p class="text-sm font-medium text-earth-muted uppercase">Remplissage Bennes</p>
+        <p class="mt-2 text-3xl font-bold text-harvest-600">85%</p>
+        <div class="w-full h-2 mt-4 bg-earth-card rounded-full">
+          <div class="h-2 bg-harvest-400 rounded-full" style="width: 85%"></div>
+        </div>
+      </div>
+
+      <div class="p-6 bg-white border border-earth-border rounded-xl shadow-sm">
+        <p class="text-sm font-medium text-earth-muted uppercase">Alertes Maturité</p>
+        <p class="mt-2 text-3xl font-bold text-alert-500">12</p>
+        <p class="mt-2 text-xs text-earth-muted italic">Signalements à traiter [cite: 34]</p>
+      </div>
+
+      <div class="p-6 bg-white border border-earth-border rounded-xl shadow-sm">
+        <p class="text-sm font-medium text-earth-muted uppercase">Rendement (kg/arbre)</p>
+        <p class="mt-2 text-3xl font-bold text-olive-700">42.5</p>
+        <p class="mt-2 text-xs text-olive-500">+5% vs Saison 2025</p>
+      </div>
+
+      <div class="p-6 bg-white border border-earth-border rounded-xl shadow-sm">
+        <p class="text-sm font-medium text-earth-muted uppercase">Tracteurs en Tournée</p>
+        <p class="mt-2 text-3xl font-bold text-earth-text">08</p>
+        <p class="mt-2 text-xs text-earth-muted">Sur 10 disponibles [cite: 38]</p>
+      </div>
+    </div>
+
+    <div class="mt-10 p-6 bg-white border border-earth-border rounded-xl shadow-sm h-96 flex flex-col items-center justify-center">
+      <div class="text-center">
+        <p class="text-earth-muted">Visualisation de la Carte Interactive [cite: 40]</p>
+        <div class="mt-4 p-4 border-2 border-dashed border-earth-border rounded text-earth-muted">
+          Intégrez Leaflet ou Google Maps ici
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 p-6 bg-white border border-earth-border rounded-xl shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-earth-text">Utilisateurs récents</h2>
+        <a routerLink="/responsable/users" class="text-sm text-olive-700 hover:underline">Voir tout</a>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+          <tr class="text-left text-earth-muted border-b border-earth-border">
+            <th class="py-2 pr-4">Nom</th>
+            <th class="py-2 pr-4">Email</th>
+            <th class="py-2 pr-4">Role</th>
+            <th class="py-2">Statut</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let user of users" class="border-b border-earth-card">
+            <td class="py-3 pr-4 text-earth-text">{{ user.nom }}</td>
+            <td class="py-3 pr-4 text-earth-muted">{{ user.email }}</td>
+            <td class="py-3 pr-4 text-earth-text">{{ user.role }}</td>
+            <td class="py-3">
+              <span class="px-2 py-1 text-xs rounded-full bg-olive-50 text-olive-700">{{ user.statut }}</span>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>

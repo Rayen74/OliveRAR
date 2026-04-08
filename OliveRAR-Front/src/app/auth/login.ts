@@ -2,7 +2,7 @@ import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AuthService, AuthResponse } from './auth.service';
+import { AuthService, AuthResponse, Role } from './auth.service';
 
 @Component({
   selector: 'app-login',
@@ -121,10 +121,21 @@ export class LoginComponent {
 
         if (response.success) {
           console.log('[Login] Success detected');
-          localStorage.setItem('user', JSON.stringify(response.user));
+          if (!response.user) {
+            this.showNotification('Connexion refusée: utilisateur manquant.', 'error');
+            return;
+          }
+
+          const token = response.token ?? `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          this.authService.setSession(token, response.user);
           this.showNotification('Connexion réussie ! Bienvenue.', 'success');
+
+          const redirectPath = response.user.role === Role.RESPONSABLE_COOPERATIVE
+            ? '/responsable/dashboard'
+            : '/login';
+
           setTimeout(() => {
-            this.router.navigate(['/pages/dashboard']);
+            this.router.navigate([redirectPath]);
           }, 1500);
         } else {
           console.warn('Login failed for:', credentials.email, '-', response.message);

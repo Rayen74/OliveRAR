@@ -1,11 +1,23 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './auth/login';
 import { ForgotPasswordComponent } from './auth/forgot-password/forgot-password';
-import { CreateAccountComponent } from './auth/create-account/create-account';
+import { DashboardComponent } from './responsableCooperative/components/dashboard/dashboard';
+import { UsersComponent } from './responsableCooperative/components/users/users';
+import { authGuard } from './auth/auth.guard';
+import { responsableCooperativeGuard } from './auth/responsable-cooperative.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'create-account', component: CreateAccountComponent }
+  {
+    path: 'responsable',
+    canActivate: [authGuard, responsableCooperativeGuard],
+    children: [
+      { path: 'dashboard', component: DashboardComponent },
+      { path: 'users', component: UsersComponent },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+    ]
+  },
+  { path: '**', redirectTo: 'login' }
 ];

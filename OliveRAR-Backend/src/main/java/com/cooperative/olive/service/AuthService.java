@@ -4,10 +4,13 @@ import com.cooperative.olive.dao.UserRepository;
 import com.cooperative.olive.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
 @RequiredArgsConstructor
 @Slf4j
 public class AuthService {
