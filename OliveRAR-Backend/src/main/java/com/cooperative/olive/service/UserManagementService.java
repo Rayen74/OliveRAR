@@ -65,7 +65,7 @@ public class UserManagementService {
         if (newPassword != null && !newPassword.trim().isEmpty()) {
             // On n'appelle votre validation que si un nouveau mot de passe est saisi
             validatePassword(newPassword);
-            existingUser.setPassword(newPassword); // Encodez-le ici si nécessaire
+            existingUser.setPassword(passwordEncoder.encode(newPassword));
         }
         // Si vide, existingUser.getPassword() reste l'ancien mot de passe
 

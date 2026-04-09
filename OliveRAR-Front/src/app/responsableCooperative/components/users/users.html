@@ -37,6 +37,21 @@
                  type="password"
                  class="w-full px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none" />
           <p *ngIf="editingUserId" class="text-[9px] text-earth-muted mt-1 uppercase tracking-tighter">Optionnel pour l'édition</p>
+
+          <!-- Password validation messages -->
+          <div *ngIf="userForm.get('password')?.value && passwordErrors.length > 0" class="mt-2 space-y-1">
+            <div *ngFor="let error of passwordErrors"
+                 class="flex items-center gap-2 text-xs text-red-600">
+              <span>❌</span>
+              <span>{{ error }}</span>
+            </div>
+          </div>
+          <div *ngIf="userForm.get('password')?.value && isPasswordValid" class="mt-2">
+            <div class="flex items-center gap-2 text-xs text-green-600">
+              <span>✅</span>
+              <span>Mot de passe valide</span>
+            </div>
+          </div>
         </div>
 
         <select formControlName="role" class="px-3 py-2 border rounded-lg border-earth-border bg-white outline-none focus:ring-1 focus:ring-olive-500">

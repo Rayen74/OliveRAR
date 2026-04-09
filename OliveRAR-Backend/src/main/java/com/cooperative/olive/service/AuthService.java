@@ -2,12 +2,21 @@ package com.cooperative.olive.service;
 
 import com.cooperative.olive.dao.UserRepository;
 import com.cooperative.olive.entity.User;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.UUID;
 
 @Service
 @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
@@ -17,6 +26,10 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
+
+    // Secret key for HS512 (In production, load this from application.properties)
+    private final SecretKey jwtKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
 
     public User login(User loginUser) {
         log.info("Login attempt for email: {}", loginUser.getEmail());
@@ -35,6 +48,68 @@ public class AuthService {
             log.warn("Login failed: Incorrect password - {}", loginUser.getEmail());
             throw new RuntimeException("Mot de passe incorrect");
         }
+    }
+
+    public String generateToken(User user) {
+        long now = System.currentTimeMillis();
+        String token = Jwts.builder()
+                .setSubject(user.getEmail())
+                .claim("role", user.getRole().name())
+                .setIssuedAt(new Date(now))
+                .setExpiration(new Date(now + 86400000)) // 24 Hours validity
+                .signWith(jwtKey)
+                .compact();
+        
+        log.info("JWT Generated for user {}: {}", user.getEmail(), token);
+        return token;
+    }
+
+    public void createPasswordResetToken(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new RuntimeException("Aucun utilisateur avec cet email");
+        }
+
+        String token = UUID.randomUUID().toString();
+        user.setResetToken(token);
+        user.setResetTokenExpiry(Instant.now().plus(15, ChronoUnit.MINUTES)); // Valid for 15 minutes
+        userRepository.save(user);
+
+        // Send password reset email
+        emailService.sendPasswordResetEmail(email, token);
+
+        log.info("Password reset token generated and email sent for user: {}", email);
+    }
+
+    public boolean isPasswordResetTokenValid(String token) {
+        User user = userRepository.findByResetToken(token);
+        if (user == null || user.getResetTokenExpiry() == null) {
+            return false;
+        }
+
+        if (user.getResetTokenExpiry().isBefore(Instant.now())) {
+            user.setResetToken(null);
+            user.setResetTokenExpiry(null);
+            userRepository.save(user);
+            return false;
+        }
+
+        return true;
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        User user = userRepository.findByResetToken(token);
+        if (user == null || user.getResetTokenExpiry() == null || user.getResetTokenExpiry().isBefore(Instant.now())) {
+            throw new RuntimeException("Token invalide ou expiré");
+        }
+
+        validatePassword(newPassword); // Reuse existing password complexity logic
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
+        
+        log.info("Password reset successful for user: {}", user.getEmail());
     }
 
     public User register(User user) {

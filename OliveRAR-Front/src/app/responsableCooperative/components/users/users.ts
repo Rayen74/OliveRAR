@@ -48,6 +48,44 @@ export class UsersComponent implements OnInit {
     Role.RESPONSABLE_CHEF_RECOLTE
   ];
 
+  // Password validation methods
+  getPasswordValidationErrors(password: string): string[] {
+    const errors: string[] = [];
+
+    if (!password) return errors;
+
+    if (password.length < 8) {
+      errors.push('Au moins 8 caractères');
+    }
+
+    if (!/[0-9]/.test(password)) {
+      errors.push('Au moins un chiffre');
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Au moins une lettre majuscule');
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errors.push('Au moins une lettre minuscule');
+    }
+
+    if (!/[@#$%^&+=!*?]/.test(password)) {
+      errors.push('Au moins un caractère spécial (@#$%^&+=!*?)');
+    }
+
+    return errors;
+  }
+
+  get passwordErrors(): string[] {
+    const passwordValue = this.userForm.get('password')?.value || '';
+    return this.getPasswordValidationErrors(passwordValue);
+  }
+
+  get isPasswordValid(): boolean {
+    return this.passwordErrors.length === 0 && (this.userForm.get('password')?.value?.length > 0);
+  }
+
   constructor(
     private fb: FormBuilder,
     private usersService: UsersService
@@ -89,6 +127,22 @@ export class UsersComponent implements OnInit {
     this.error = '';
 
     const payload = this.userForm.getRawValue();
+
+    // Validate password for create operations or when password is provided for updates
+    const password = payload.password;
+    if (!this.editingUserId && (!password || !this.isPasswordValid)) {
+      // Creating new user - password is required and must be valid
+      this.showNotification('Le mot de passe ne respecte pas les critères de sécurité.', 'error');
+      this.isSubmitting = false;
+      return;
+    }
+
+    if (this.editingUserId && password && !this.isPasswordValid) {
+      // Updating user with new password - must be valid if provided
+      this.showNotification('Le mot de passe ne respecte pas les critères de sécurité.', 'error');
+      this.isSubmitting = false;
+      return;
+    }
 
     const request$ = this.editingUserId
       ? this.usersService.update(this.editingUserId, payload as UpdateManagedUserPayload)

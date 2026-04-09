@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
+import { AuthService } from '../../../auth/auth.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -17,4 +18,11 @@ export class SidebarComponent {
     { link: '/responsable/collectes', label: 'Créer Collecte', icon: 'add_circle' },
     { link: '/responsable/rendements', label: 'Rendements', icon: 'bar_chart' }
   ];
+
+  constructor(private authService: AuthService, private router: Router) {}
+
+  onLogout() {
+    this.authService.logout();
+    this.router.navigate(['/login']);
+  }
 }

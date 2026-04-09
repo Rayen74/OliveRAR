@@ -61,6 +61,18 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/register`, userData);
   }
 
+  forgotPassword(email: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, password: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/reset-password`, { token, password });
+  }
+
+  validateResetToken(token: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/validate-reset-token`, { params: { token } });
+  }
+
   setSession(token: string, user: User): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
@@ -94,5 +106,15 @@ export class AuthService {
     }
     localStorage.removeItem(this.tokenStorageKey);
     localStorage.removeItem(this.userStorageKey);
+  }
+
+  logout(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      const token = localStorage.getItem(this.tokenStorageKey);
+      console.log('Logging out - Removing JWT from storage:', token); // Logging the token
+
+      localStorage.removeItem(this.tokenStorageKey);
+      localStorage.removeItem(this.userStorageKey);
+    }
   }
 }
