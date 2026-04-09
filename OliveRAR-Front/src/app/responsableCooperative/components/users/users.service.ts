@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Role, User } from '../../../auth/auth.service';
 
@@ -42,10 +42,22 @@ export interface UpdateManagedUserPayload {
 export class UsersService {
   private readonly apiUrl = 'http://localhost:8080/api/users';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
-  getAll(page = 0, size = 7): Observable<UsersResponse> {
-    return this.http.get<UsersResponse>(`${this.apiUrl}?page=${page}&size=${size}`);
+  getAll(page = 0, size = 7, name?: string, role?: string): Observable<UsersResponse> {
+    let params = new HttpParams()
+      .set('page', String(page))
+      .set('size', String(size));
+
+    if (name?.trim()) {
+      params = params.set('name', name.trim());
+    }
+
+    if (role) {
+      params = params.set('role', role);
+    }
+
+    return this.http.get<UsersResponse>(this.apiUrl, { params });
   }
 
   create(payload: CreateManagedUserPayload): Observable<UserMutationResponse> {

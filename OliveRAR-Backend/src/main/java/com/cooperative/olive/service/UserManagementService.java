@@ -10,10 +10,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
@@ -22,16 +27,42 @@ public class UserManagementService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MongoTemplate mongoTemplate;
 
     public List<User> getAllManagedUsers() {
         return userRepository.findByRoleNot(Role.RESPONSABLE_COOPERATIVE);
     }
 
     public Page<User> getManagedUsersPage(int page, int size) {
+        return getManagedUsersPage(page, size, null, null);
+    }
+
+    public Page<User> getManagedUsersPage(int page, int size, String name, Role role) {
         int safePage = Math.max(page, 0);
         int safeSize = size <= 0 ? 7 : Math.min(size, 50);
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("nom").ascending());
-        return userRepository.findByRoleNot(Role.RESPONSABLE_COOPERATIVE, pageable);
+
+        Criteria criteria;
+        if (role != null) {
+            criteria = Criteria.where("role").is(role.name());
+        } else {
+            criteria = Criteria.where("role").ne(Role.RESPONSABLE_COOPERATIVE.name());
+        }
+
+        if (name != null && !name.isBlank()) {
+            String regex = ".*" + Pattern.quote(name.trim()) + ".*";
+            Criteria nameCriteria = new Criteria().orOperator(
+                    Criteria.where("nom").regex(regex, "i"),
+                    Criteria.where("prenom").regex(regex, "i"));
+            criteria = new Criteria().andOperator(criteria, nameCriteria);
+        }
+
+        Query query = new Query(criteria).with(pageable);
+        List<User> users = mongoTemplate.find(query, User.class);
+        Query countQuery = new Query(criteria);
+        long total = mongoTemplate.count(countQuery, User.class);
+
+        return PageableExecutionUtils.getPage(users, pageable, () -> total);
     }
 
     public User createUser(User user) {
@@ -92,7 +123,8 @@ public class UserManagementService {
                 || !password.matches(".*[A-Z].*")
                 || !password.matches(".*[a-z].*")
                 || !password.matches(".*[@#$%^&+=!*?].*")) {
-            throw new RuntimeException("Le mot de passe doit contenir une majuscule, une minuscule, un chiffre et un caractere special.");
+            throw new RuntimeException(
+                    "Le mot de passe doit contenir une majuscule, une minuscule, un chiffre et un caractere special.");
         }
     }
 }

@@ -19,7 +19,7 @@ export class SidebarComponent {
     { link: '/responsable/rendements', label: 'Rendements', icon: 'bar_chart' }
   ];
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router) { }
 
   onLogout() {
     this.authService.logout();

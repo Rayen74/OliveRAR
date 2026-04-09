@@ -1,5 +1,6 @@
 package com.cooperative.olive.controller;
 
+import com.cooperative.olive.entity.Role;
 import com.cooperative.olive.entity.User;
 import com.cooperative.olive.service.UserManagementService;
 import lombok.RequiredArgsConstructor;
@@ -20,17 +21,28 @@ public class UserManagementController {
     @GetMapping
     public ResponseEntity<?> getAllUsersExceptResponsableCooperative(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "7") int size
-    ) {
-        Page<User> usersPage = userManagementService.getManagedUsersPage(page, size);
+            @RequestParam(defaultValue = "7") int size,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String role) {
+        Role filterRole = null;
+        if (role != null && !role.isBlank()) {
+            try {
+                filterRole = Role.valueOf(role);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Role invalide"));
+            }
+        }
+
+        Page<User> usersPage = userManagementService.getManagedUsersPage(page, size, name, filterRole);
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "users", usersPage.getContent(),
                 "page", usersPage.getNumber(),
                 "size", usersPage.getSize(),
                 "totalElements", usersPage.getTotalElements(),
-                "totalPages", usersPage.getTotalPages()
-        ));
+                "totalPages", usersPage.getTotalPages()));
     }
 
     @PostMapping
@@ -40,13 +52,11 @@ public class UserManagementController {
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                     "success", true,
                     "message", "Utilisateur cree avec succes",
-                    "user", created
-            ));
+                    "user", created));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", e.getMessage()
-            ));
+                    "message", e.getMessage()));
         }
     }
 
@@ -57,13 +67,11 @@ public class UserManagementController {
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "Utilisateur mis a jour",
-                    "user", updated
-            ));
+                    "user", updated));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "message", e.getMessage()
-            ));
+                    "message", e.getMessage()));
         }
     }
 
@@ -73,13 +81,11 @@ public class UserManagementController {
             userManagementService.deleteUser(id);
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Utilisateur supprime"
-            ));
+                    "message", "Utilisateur supprime"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
                     "success", false,
-                    "message", e.getMessage()
-            ));
+                    "message", e.getMessage()));
         }
     }
 }

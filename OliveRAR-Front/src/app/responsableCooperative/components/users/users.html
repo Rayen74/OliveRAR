@@ -16,6 +16,29 @@
       <p class="text-earth-muted text-sm">Ajouter, modifier et supprimer les membres de la coopérative</p>
     </header>
 
+    <div class="mb-6 p-6 bg-white border border-earth-border rounded-xl shadow-sm">
+      <form [formGroup]="filterForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-earth-text mb-2">Rechercher par nom</label>
+          <input type="text" formControlName="searchName"
+                 (input)="onFilterChange()"
+                 placeholder="Nom ou prénom"
+                 class="w-full px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-earth-text mb-2">Filtrer par rôle</label>
+          <select formControlName="searchRole" (change)="onFilterChange()"
+                  class="w-full px-3 py-2 border rounded-lg border-earth-border bg-white outline-none focus:ring-1 focus:ring-olive-500">
+            <option value="">Tous les rôles</option>
+            <option *ngFor="let role of roleFilterOptions" [value]="role">
+              {{ role }}
+            </option>
+          </select>
+        </div>
+      </form>
+    </div>
+
     <div *ngIf="error" class="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
       {{ error }}
     </div>

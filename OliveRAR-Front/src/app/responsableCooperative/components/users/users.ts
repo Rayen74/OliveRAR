@@ -41,7 +41,12 @@ export class UsersComponent implements OnInit {
   toast = { message: '', type: 'success' as 'success' | 'error', show: false };
 
   userForm: FormGroup;
-
+  filterForm: FormGroup;
+  readonly roleFilterOptions: Array<Exclude<Role, Role.RESPONSABLE_COOPERATIVE>> = [
+    Role.AGRICULTEUR,
+    Role.RESPONSABLE_LOGISTIQUE,
+    Role.RESPONSABLE_CHEF_RECOLTE
+  ];
   readonly manageableRoles: Array<Exclude<Role, Role.RESPONSABLE_COOPERATIVE>> = [
     Role.AGRICULTEUR,
     Role.RESPONSABLE_LOGISTIQUE,
@@ -98,6 +103,11 @@ export class UsersComponent implements OnInit {
       password: [''],
       role: [Role.AGRICULTEUR]
     });
+
+    this.filterForm = this.fb.group({
+      searchName: [''],
+      searchRole: ['']
+    });
   }
 
   ngOnInit(): void {
@@ -107,12 +117,19 @@ export class UsersComponent implements OnInit {
         this.error = '';
       }),
       switchMap(() =>
-        this.usersService.getAll(this.currentPage, this.pageSize).pipe(
-          catchError((err) => {
-            this.error = "Impossible de charger la liste.";
-            return of({ users: [], totalElements: 0, totalPages: 1 });
-          })
-        )
+        this.usersService
+          .getAll(
+            this.currentPage,
+            this.pageSize,
+            this.filterForm.get('searchName')?.value,
+            this.filterForm.get('searchRole')?.value
+          )
+          .pipe(
+            catchError((err) => {
+              this.error = "Impossible de charger la liste.";
+              return of({ users: [], totalElements: 0, totalPages: 1 });
+            })
+          )
       ),
       tap((response) => {
         this.totalElements = response.totalElements ?? 0;
@@ -120,6 +137,11 @@ export class UsersComponent implements OnInit {
         this.isLoading = false;
       })
     );
+  }
+
+  onFilterChange(): void {
+    this.currentPage = 0;
+    this.refreshTrigger$.next();
   }
 
   submitUserForm(): void {

@@ -7,21 +7,21 @@
   <div class="flex flex-col justify-between flex-1 mt-6">
     <nav class="flex-1 -mx-3 space-y-3">
       <div class="relative">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                    </span>
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+        </span>
       </div>
 
-      <a *ngFor="let item of menuItems"
-         [routerLink]="item.link"
-         routerLinkActive="bg-olive-500 text-white"
-         class="flex items-center px-3 py-2 text-earth-text transition-colors duration-300 transform rounded-lg hover:bg-olive-200 hover:text-olive-900">
+      <a *ngFor="let item of menuItems" [routerLink]="item.link" routerLinkActive="bg-olive-500 text-white"
+        class="flex items-center px-3 py-2 text-earth-text transition-colors duration-300 transform rounded-lg hover:bg-olive-200 hover:text-olive-900">
         <span class="mx-2 font-medium">{{ item.label }}</span>
       </a>
 
       <button (click)="onLogout()"
-              class="flex items-center w-full px-3 py-2 mt-auto text-red-600 transition-colors duration-300 transform rounded-lg hover:bg-red-50">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        class="flex items-center w-full px-3 py-2 mt-auto text-red-600 transition-colors duration-300 transform rounded-lg hover:bg-red-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-2" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
         </svg>
         <span class="font-medium">Déconnexion</span>
       </button>
