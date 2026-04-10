@@ -20,7 +20,6 @@ import {
   templateUrl: './users.html'
 })
 export class UsersComponent implements OnInit {
-  // Trigger pour rafraîchir la liste via le pipe async
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
   usersData$: Observable<any> | undefined;
 
@@ -29,13 +28,11 @@ export class UsersComponent implements OnInit {
   editingUserId: string | null = null;
   error = '';
 
-  // Pagination
   currentPage = 0;
   pageSize = 7;
   totalPages = 1;
   totalElements = 0;
 
-  // Modales et Toasts
   isDeleteModalOpen = false;
   userToDelete: ManagedUser | null = null;
   toast = { message: '', type: 'success' as 'success' | 'error', show: false };
@@ -53,14 +50,51 @@ export class UsersComponent implements OnInit {
     Role.RESPONSABLE_CHEF_RECOLTE
   ];
 
-  // Password validation methods
+  constructor(
+    private fb: FormBuilder,
+    private usersService: UsersService
+  ) {
+    this.userForm = this.fb.group({
+      nom: [''],
+      prenom: [''],
+      email: [''],
+      phoneNumber: [''],
+      password: [''],
+      role: [Role.AGRICULTEUR]
+    });
+
+    this.filterForm = this.fb.group({
+      searchName: [''],
+      searchRole: ['']
+    });
+  }
+
+  get passwordErrors(): string[] {
+    const passwordValue = this.userForm.get('password')?.value || '';
+    return this.getPasswordValidationErrors(passwordValue);
+  }
+
+  get isPasswordValid(): boolean {
+    return this.passwordErrors.length === 0 && (this.userForm.get('password')?.value?.length > 0);
+  }
+
+  get phoneError(): string {
+    const phoneNumber = (this.userForm.get('phoneNumber')?.value || '').trim();
+    if (!phoneNumber) {
+      return '';
+    }
+    return /^\d{8}$/.test(phoneNumber) ? '' : 'Le numero doit contenir exactement 8 chiffres.';
+  }
+
   getPasswordValidationErrors(password: string): string[] {
     const errors: string[] = [];
 
-    if (!password) return errors;
+    if (!password) {
+      return errors;
+    }
 
     if (password.length < 8) {
-      errors.push('Au moins 8 caractères');
+      errors.push('Au moins 8 caracteres');
     }
 
     if (!/[0-9]/.test(password)) {
@@ -76,38 +110,10 @@ export class UsersComponent implements OnInit {
     }
 
     if (!/[@#$%^&+=!*?]/.test(password)) {
-      errors.push('Au moins un caractère spécial (@#$%^&+=!*?)');
+      errors.push('Au moins un caractere special (@#$%^&+=!*?)');
     }
 
     return errors;
-  }
-
-  get passwordErrors(): string[] {
-    const passwordValue = this.userForm.get('password')?.value || '';
-    return this.getPasswordValidationErrors(passwordValue);
-  }
-
-  get isPasswordValid(): boolean {
-    return this.passwordErrors.length === 0 && (this.userForm.get('password')?.value?.length > 0);
-  }
-
-  constructor(
-    private fb: FormBuilder,
-    private usersService: UsersService
-  ) {
-    // Initialisation sans validateurs (tout est géré par le Backend)
-    this.userForm = this.fb.group({
-      nom: [''],
-      prenom: [''],
-      email: [''],
-      password: [''],
-      role: [Role.AGRICULTEUR]
-    });
-
-    this.filterForm = this.fb.group({
-      searchName: [''],
-      searchRole: ['']
-    });
   }
 
   ngOnInit(): void {
@@ -125,8 +131,8 @@ export class UsersComponent implements OnInit {
             this.filterForm.get('searchRole')?.value
           )
           .pipe(
-            catchError((err) => {
-              this.error = "Impossible de charger la liste.";
+            catchError(() => {
+              this.error = 'Impossible de charger la liste.';
               return of({ users: [], totalElements: 0, totalPages: 1 });
             })
           )
@@ -149,19 +155,22 @@ export class UsersComponent implements OnInit {
     this.error = '';
 
     const payload = this.userForm.getRawValue();
-
-    // Validate password for create operations or when password is provided for updates
     const password = payload.password;
+
+    if (this.phoneError) {
+      this.showNotification(this.phoneError, 'error');
+      this.isSubmitting = false;
+      return;
+    }
+
     if (!this.editingUserId && (!password || !this.isPasswordValid)) {
-      // Creating new user - password is required and must be valid
-      this.showNotification('Le mot de passe ne respecte pas les critères de sécurité.', 'error');
+      this.showNotification('Le mot de passe ne respecte pas les criteres de securite.', 'error');
       this.isSubmitting = false;
       return;
     }
 
     if (this.editingUserId && password && !this.isPasswordValid) {
-      // Updating user with new password - must be valid if provided
-      this.showNotification('Le mot de passe ne respecte pas les critères de sécurité.', 'error');
+      this.showNotification('Le mot de passe ne respecte pas les criteres de securite.', 'error');
       this.isSubmitting = false;
       return;
     }
@@ -179,7 +188,6 @@ export class UsersComponent implements OnInit {
         }
       },
       error: (err) => {
-        // Affiche l'erreur renvoyée par validatePassword ou autre contrainte Backend
         const msg = err?.error?.message || 'Une erreur est survenue';
         this.showNotification(msg, 'error');
         this.error = msg;
@@ -193,7 +201,8 @@ export class UsersComponent implements OnInit {
       nom: user.nom,
       prenom: user.prenom,
       email: user.email,
-      password: '', // On laisse vide : si l'admin n'y touche pas, le backend ignore le champ
+      phoneNumber: user.phoneNumber,
+      password: '',
       role: user.role
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -205,7 +214,9 @@ export class UsersComponent implements OnInit {
   }
 
   confirmDelete(): void {
-    if (!this.userToDelete) return;
+    if (!this.userToDelete) {
+      return;
+    }
 
     this.usersService.delete(this.userToDelete.id).subscribe({
       next: (res) => {
@@ -217,9 +228,20 @@ export class UsersComponent implements OnInit {
     });
   }
 
+  formatRole(role: string): string {
+    return role.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
   private resetUI(): void {
     this.editingUserId = null;
-    this.userForm.reset({ role: Role.AGRICULTEUR });
+    this.userForm.reset({
+      nom: '',
+      prenom: '',
+      email: '',
+      phoneNumber: '',
+      password: '',
+      role: Role.AGRICULTEUR
+    });
   }
 
   cancelEdit(): void {

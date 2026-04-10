@@ -28,14 +28,13 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    // Secret key for HS512 (In production, load this from application.properties)
     private final SecretKey jwtKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
 
     public User login(User loginUser) {
         log.info("Login attempt for email: {}", loginUser.getEmail());
-        
+
         User user = userRepository.findByEmail(loginUser.getEmail());
-        
+
         if (user == null) {
             log.warn("Login failed: User not found - {}", loginUser.getEmail());
             throw new RuntimeException("L'utilisateur n'existe pas");
@@ -44,10 +43,10 @@ public class AuthService {
         if (passwordEncoder.matches(loginUser.getPassword(), user.getPassword())) {
             log.info("Successful login for email: {}", loginUser.getEmail());
             return user;
-        } else {
-            log.warn("Login failed: Incorrect password - {}", loginUser.getEmail());
-            throw new RuntimeException("Mot de passe incorrect");
         }
+
+        log.warn("Login failed: Incorrect password - {}", loginUser.getEmail());
+        throw new RuntimeException("Mot de passe incorrect");
     }
 
     public String generateToken(User user) {
@@ -56,10 +55,10 @@ public class AuthService {
                 .setSubject(user.getEmail())
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date(now))
-                .setExpiration(new Date(now + 86400000)) // 24 Hours validity
+                .setExpiration(new Date(now + 86400000))
                 .signWith(jwtKey)
                 .compact();
-        
+
         log.info("JWT Generated for user {}: {}", user.getEmail(), token);
         return token;
     }
@@ -72,10 +71,8 @@ public class AuthService {
 
         String token = UUID.randomUUID().toString();
         user.setResetToken(token);
-        user.setResetTokenExpiry(Instant.now().plus(15, ChronoUnit.MINUTES)); // Valid for 15 minutes
+        user.setResetTokenExpiry(Instant.now().plus(15, ChronoUnit.MINUTES));
         userRepository.save(user);
-
-        // Send password reset email
         emailService.sendPasswordResetEmail(email, token);
 
         log.info("Password reset token generated and email sent for user: {}", email);
@@ -100,55 +97,66 @@ public class AuthService {
     public void resetPassword(String token, String newPassword) {
         User user = userRepository.findByResetToken(token);
         if (user == null || user.getResetTokenExpiry() == null || user.getResetTokenExpiry().isBefore(Instant.now())) {
-            throw new RuntimeException("Token invalide ou expiré");
+            throw new RuntimeException("Token invalide ou expire");
         }
 
-        validatePassword(newPassword); // Reuse existing password complexity logic
+        validatePassword(newPassword);
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
         userRepository.save(user);
-        
+
         log.info("Password reset successful for user: {}", user.getEmail());
     }
 
     public User register(User user) {
         log.info("Registration attempt for email: {}", user.getEmail());
-        
+
         validatePassword(user.getPassword());
-        
+        validatePhoneNumber(user.getPhoneNumber());
+
         if (userRepository.findByEmail(user.getEmail()) != null) {
             log.warn("Registration failed: User already exists - {}", user.getEmail());
-            throw new RuntimeException("L'utilisateur existe déjà avec cet email");
+            throw new RuntimeException("L'utilisateur existe deja avec cet email");
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        
+
         User savedUser = userRepository.save(user);
         log.info("Successful registration for user: {}", user.getEmail());
-        
+
         return savedUser;
     }
 
     private void validatePassword(String password) {
         if (password == null || password.length() < 8) {
-            throw new RuntimeException("Le mot de passe doit contenir au moins 8 caractères");
+            throw new RuntimeException("Le mot de passe doit contenir au moins 8 caracteres");
         }
-        
+
         if (!password.matches(".*[0-9].*")) {
             throw new RuntimeException("Le mot de passe doit contenir au moins un chiffre");
         }
-        
+
         if (!password.matches(".*[A-Z].*")) {
             throw new RuntimeException("Le mot de passe doit contenir au moins une lettre majuscule");
         }
-        
+
         if (!password.matches(".*[a-z].*")) {
             throw new RuntimeException("Le mot de passe doit contenir au moins une lettre minuscule");
         }
-        
+
         if (!password.matches(".*[@#$%^&+=!*?].*")) {
-            throw new RuntimeException("Le mot de passe doit contenir au moins un caractère spécial (@#$%^&+=!*?)");
+            throw new RuntimeException("Le mot de passe doit contenir au moins un caractere special (@#$%^&+=!*?)");
+        }
+    }
+
+    private void validatePhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            throw new RuntimeException("Le numero de telephone est obligatoire.");
+        }
+
+        if (!phoneNumber.matches("\\d{8}")) {
+            throw new RuntimeException("Le numero de telephone doit contenir exactement 8 chiffres.");
         }
     }
 }

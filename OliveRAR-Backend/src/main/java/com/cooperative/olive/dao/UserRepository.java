@@ -12,6 +12,7 @@ import java.util.List;
 public interface UserRepository extends MongoRepository<User, String> {
     User findByEmail(String email);
     boolean existsByEmail(String email);
+    boolean existsByEmailAndIdNot(String email, String id);
     List<User> findByRoleNot(Role role);
     Page<User> findByRoleNot(Role role, Pageable pageable);
     User findByResetToken(String resetToken);

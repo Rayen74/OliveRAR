@@ -1,7 +1,7 @@
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { Observable } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 export enum Role {
   RESPONSABLE_COOPERATIVE = 'RESPONSABLE_COOPERATIVE',
@@ -15,6 +15,8 @@ export interface User {
   nom: string;
   prenom: string;
   email: string;
+  phoneNumber: string;
+  imageUrl?: string;
   role: Role;
 }
 
@@ -27,6 +29,7 @@ export interface RegisterRequest {
   nom: string;
   prenom: string;
   email: string;
+  phoneNumber: string;
   password: string;
   role: Role;
 }
@@ -36,8 +39,8 @@ export interface AuthResponse {
   token?: string;
   message?: string;
   success?: boolean;
-  id?: string; // Automatically created id
-  [key: string]: any; // Allow other fields for flexibility
+  id?: string;
+  [key: string]: any;
 }
 
 @Injectable({
@@ -47,11 +50,18 @@ export class AuthService {
   private apiUrl = 'http://localhost:8080/api/auth';
   private readonly tokenStorageKey = 'token';
   private readonly userStorageKey = 'user';
+  private readonly currentUserSubject = new BehaviorSubject<User | null>(null);
+  readonly currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(
     private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object
-  ) { }
+  ) {
+    if (isPlatformBrowser(this.platformId)) {
+      const user = localStorage.getItem(this.userStorageKey);
+      this.currentUserSubject.next(user ? JSON.parse(user) as User : null);
+    }
+  }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials);
@@ -79,6 +89,15 @@ export class AuthService {
     }
     localStorage.setItem(this.tokenStorageKey, token);
     localStorage.setItem(this.userStorageKey, JSON.stringify(user));
+    this.currentUserSubject.next(user);
+  }
+
+  updateConnectedUser(user: User): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+    localStorage.setItem(this.userStorageKey, JSON.stringify(user));
+    this.currentUserSubject.next(user);
   }
 
   getToken(): string | null {
@@ -93,11 +112,7 @@ export class AuthService {
   }
 
   getConnectedUser(): User | null {
-    if (!isPlatformBrowser(this.platformId)) {
-      return null;
-    }
-    const user = localStorage.getItem(this.userStorageKey);
-    return user ? JSON.parse(user) as User : null;
+    return this.currentUserSubject.value;
   }
 
   clearSession(): void {
@@ -106,15 +121,15 @@ export class AuthService {
     }
     localStorage.removeItem(this.tokenStorageKey);
     localStorage.removeItem(this.userStorageKey);
+    this.currentUserSubject.next(null);
   }
 
   logout(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      const token = localStorage.getItem(this.tokenStorageKey);
-      console.log('Logging out - Removing JWT from storage:', token); // Logging the token
-
-      localStorage.removeItem(this.tokenStorageKey);
-      localStorage.removeItem(this.userStorageKey);
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
     }
+    localStorage.removeItem(this.tokenStorageKey);
+    localStorage.removeItem(this.userStorageKey);
+    this.currentUserSubject.next(null);
   }
 }

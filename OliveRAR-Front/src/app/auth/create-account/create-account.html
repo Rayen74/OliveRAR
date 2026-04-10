@@ -102,6 +102,22 @@
         </div>
       </div>
 
+      <div class="mb-4">
+        <label class="block text-xs font-medium text-earth-text mb-1.5">
+          Telephone
+        </label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-earth-muted" style="font-size:15px">☎</span>
+          <input type="text" formControlName="phoneNumber" maxlength="8" placeholder="12345678"
+                 class="w-full pl-9 pr-4 py-2.5 rounded-lg border text-sm
+                        text-earth-text placeholder-earth-muted outline-none
+                        border-earth-border bg-earth-bg
+                        focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20
+                        transition-colors" />
+        </div>
+        <p *ngIf="phoneError" class="mt-2 text-xs text-red-600">{{ phoneError }}</p>
+      </div>
+
       <!-- Password -->
       <div class="mb-4">
         <label class="block text-xs font-medium text-earth-text mb-1.5">

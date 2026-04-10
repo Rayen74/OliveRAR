@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../auth/auth.service';
 
 @Component({
@@ -10,16 +10,30 @@ import { AuthService } from '../../../auth/auth.service';
   templateUrl: './sidebar.html'
 })
 export class SidebarComponent {
-  // Liens pour le Responsable Coopérative basés sur vos Use Cases
+  readonly currentUser$;
+
   menuItems = [
     { link: '/responsable/dashboard', label: 'Tableau de bord', icon: 'dashboard' },
     { link: '/responsable/users', label: 'Utilisateurs', icon: 'group' },
-    { link: '/responsable/carte', label: 'Carte Interactive', icon: 'map' },
-    { link: '/responsable/collectes', label: 'Créer Collecte', icon: 'add_circle' },
-    { link: '/responsable/rendements', label: 'Rendements', icon: 'bar_chart' }
+    { link: '/responsable/profile', label: 'Mon profil', icon: 'person' }
   ];
 
-  constructor(private authService: AuthService, private router: Router) { }
+  constructor(private authService: AuthService, private router: Router) {
+    this.currentUser$ = this.authService.currentUser$;
+  }
+
+  getInitials(prenom?: string, nom?: string): string {
+    const first = prenom?.charAt(0) ?? '';
+    const last = nom?.charAt(0) ?? '';
+    return `${first}${last}`.toUpperCase() || 'OP';
+  }
+
+  formatRole(role?: string): string {
+    if (!role) {
+      return '';
+    }
+    return role.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+  }
 
   onLogout() {
     this.authService.logout();

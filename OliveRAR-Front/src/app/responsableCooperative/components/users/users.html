@@ -1,9 +1,11 @@
 <div class="flex min-h-screen bg-earth-bg">
-  <div *ngIf="toast.show"
-       class="fixed top-6 right-6 flex items-center gap-2 px-4 py-3 rounded-xl border shadow-xl transition-all duration-300 z-[9999]"
-       [style.background-color]="toast.type === 'success' ? '#f0fdf4' : '#fef2f2'"
-       [style.border-color]="toast.type === 'success' ? '#86efac' : '#fca5a5'"
-       [style.color]="toast.type === 'success' ? '#166534' : '#991b1b'">
+  <div
+    *ngIf="toast.show"
+    class="fixed top-6 right-6 flex items-center gap-2 px-4 py-3 rounded-xl border shadow-xl transition-all duration-300 z-[9999]"
+    [style.background-color]="toast.type === 'success' ? '#f0fdf4' : '#fef2f2'"
+    [style.border-color]="toast.type === 'success' ? '#86efac' : '#fca5a5'"
+    [style.color]="toast.type === 'success' ? '#166534' : '#991b1b'"
+  >
     <span class="material-symbols-outlined text-base">{{ toast.type === 'success' ? 'check_circle' : 'error' }}</span>
     <span class="text-sm font-medium">{{ toast.message }}</span>
   </div>
@@ -13,26 +15,32 @@
   <main class="flex-1 p-8" *ngIf="usersData$ | async as data">
     <header class="mb-6">
       <h1 class="text-3xl font-bold text-earth-text">Gestion des utilisateurs</h1>
-      <p class="text-earth-muted text-sm">Ajouter, modifier et supprimer les membres de la coopérative</p>
+      <p class="text-earth-muted text-sm">Ajouter, modifier et supprimer les membres de la cooperative</p>
     </header>
 
     <div class="mb-6 p-6 bg-white border border-earth-border rounded-xl shadow-sm">
       <form [formGroup]="filterForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-earth-text mb-2">Rechercher par nom</label>
-          <input type="text" formControlName="searchName"
-                 (input)="onFilterChange()"
-                 placeholder="Nom ou prénom"
-                 class="w-full px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none" />
+          <input
+            type="text"
+            formControlName="searchName"
+            (input)="onFilterChange()"
+            placeholder="Nom ou prenom"
+            class="w-full px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none"
+          >
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-earth-text mb-2">Filtrer par rôle</label>
-          <select formControlName="searchRole" (change)="onFilterChange()"
-                  class="w-full px-3 py-2 border rounded-lg border-earth-border bg-white outline-none focus:ring-1 focus:ring-olive-500">
-            <option value="">Tous les rôles</option>
+          <label class="block text-sm font-medium text-earth-text mb-2">Filtrer par role</label>
+          <select
+            formControlName="searchRole"
+            (change)="onFilterChange()"
+            class="w-full px-3 py-2 border rounded-lg border-earth-border bg-white outline-none focus:ring-1 focus:ring-olive-500"
+          >
+            <option value="">Tous les roles</option>
             <option *ngFor="let role of roleFilterOptions" [value]="role">
-              {{ role }}
+              {{ formatRole(role) }}
             </option>
           </select>
         </div>
@@ -44,52 +52,66 @@
     </div>
 
     <div class="p-6 bg-white border border-earth-border rounded-xl shadow-sm mb-6">
-      <form [formGroup]="userForm" (ngSubmit)="submitUserForm()" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-        <input formControlName="nom" placeholder="Nom"
-               class="px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none" />
+      <form [formGroup]="userForm" (ngSubmit)="submitUserForm()" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <input formControlName="nom" placeholder="Nom" class="px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
 
-        <input formControlName="prenom" placeholder="Prénom"
-               class="px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none" />
+        <input formControlName="prenom" placeholder="Prenom" class="px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
 
-        <input formControlName="email" placeholder="Email"
-               class="px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none" />
+        <input formControlName="email" placeholder="Email" class="px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+
+        <div>
+          <input
+            formControlName="phoneNumber"
+            placeholder="Telephone (8 chiffres)"
+            maxlength="8"
+            class="w-full px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none"
+          >
+          <p *ngIf="phoneError" class="text-xs text-red-600 mt-2">{{ phoneError }}</p>
+        </div>
 
         <div class="relative">
-          <input formControlName="password"
-                 [placeholder]="editingUserId ? 'Nouveau mot de passe' : 'Mot de passe'"
-                 type="password"
-                 class="w-full px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none" />
-          <p *ngIf="editingUserId" class="text-[9px] text-earth-muted mt-1 uppercase tracking-tighter">Optionnel pour l'édition</p>
+          <input
+            formControlName="password"
+            [placeholder]="editingUserId ? 'Nouveau mot de passe' : 'Mot de passe'"
+            type="password"
+            class="w-full px-3 py-2 border rounded-lg border-earth-border focus:ring-1 focus:ring-olive-500 outline-none"
+          >
+          <p *ngIf="editingUserId" class="text-[10px] text-earth-muted mt-1 uppercase tracking-tight">Optionnel pour l'edition</p>
 
-          <!-- Password validation messages -->
           <div *ngIf="userForm.get('password')?.value && passwordErrors.length > 0" class="mt-2 space-y-1">
-            <div *ngFor="let error of passwordErrors"
-                 class="flex items-center gap-2 text-xs text-red-600">
-              <span>❌</span>
+            <div *ngFor="let error of passwordErrors" class="flex items-center gap-2 text-xs text-red-600">
+              <span>!</span>
               <span>{{ error }}</span>
             </div>
           </div>
           <div *ngIf="userForm.get('password')?.value && isPasswordValid" class="mt-2">
             <div class="flex items-center gap-2 text-xs text-green-600">
-              <span>✅</span>
+              <span>OK</span>
               <span>Mot de passe valide</span>
             </div>
           </div>
         </div>
 
         <select formControlName="role" class="px-3 py-2 border rounded-lg border-earth-border bg-white outline-none focus:ring-1 focus:ring-olive-500">
-          <option *ngFor="let role of manageableRoles" [value]="role">{{ role }}</option>
+          <option *ngFor="let role of manageableRoles" [value]="role">{{ formatRole(role) }}</option>
         </select>
 
-        <div class="lg:col-span-5 flex gap-2 mt-2">
-          <button type="submit" [disabled]="isSubmitting"
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-olive-600 text-white rounded-lg hover:bg-olive-700 disabled:opacity-50 transition-colors">
+        <div class="lg:col-span-3 flex gap-2 mt-2">
+          <button
+            type="submit"
+            [disabled]="isSubmitting"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-olive-600 text-white rounded-lg hover:bg-olive-700 disabled:opacity-50 transition-colors"
+          >
             <span class="material-symbols-outlined text-base">{{ editingUserId ? 'save' : 'person_add' }}</span>
-            {{ editingUserId ? 'Enregistrer les modifications' : 'Créer l\'utilisateur' }}
+            {{ editingUserId ? 'Enregistrer les modifications' : 'Creer l utilisateur' }}
           </button>
 
-          <button *ngIf="editingUserId" type="button" (click)="cancelEdit()"
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-earth-card text-earth-text rounded-lg border border-earth-border hover:bg-gray-100 transition-colors">
+          <button
+            *ngIf="editingUserId"
+            type="button"
+            (click)="cancelEdit()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-earth-card text-earth-text rounded-lg border border-earth-border hover:bg-gray-100 transition-colors"
+          >
             <span class="material-symbols-outlined text-base">close</span>
             Annuler
           </button>
@@ -99,17 +121,33 @@
 
     <div *ngIf="isLoading" class="flex items-center gap-2 text-earth-muted text-sm my-4">
       <div class="w-4 h-4 border-2 border-olive-600 border-t-transparent rounded-full animate-spin"></div>
-      Mise à jour de la liste...
+      Mise a jour de la liste...
     </div>
 
     <div *ngIf="!isLoading" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       <div *ngFor="let user of data.users" class="p-4 bg-white border border-earth-border rounded-xl shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex items-start justify-between">
-          <div>
-            <p class="text-earth-text font-semibold">{{ user.nom }} {{ user.prenom }}</p>
-            <p class="text-earth-muted text-sm">{{ user.email }}</p>
-            <p class="text-xs mt-2 inline-block px-2 py-1 rounded-full bg-olive-50 text-olive-700 border border-olive-100">{{ user.role }}</p>
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-3 mb-2">
+              <ng-container *ngIf="user.imageUrl; else userInitials">
+                <img [src]="user.imageUrl" alt="photo" class="w-11 h-11 rounded-full object-cover border border-olive-100">
+              </ng-container>
+              <ng-template #userInitials>
+                <div class="w-11 h-11 rounded-full bg-olive-100 text-olive-700 border border-olive-100 flex items-center justify-center text-sm font-semibold">
+                  {{ (user.prenom?.charAt(0) || '') + (user.nom?.charAt(0) || '') }}
+                </div>
+              </ng-template>
+              <div class="min-w-0">
+                <p class="text-earth-text font-semibold truncate">{{ user.nom }} {{ user.prenom }}</p>
+                <p class="text-earth-muted text-sm truncate">{{ user.email }}</p>
+              </div>
+            </div>
+            <p class="text-sm text-earth-muted">Telephone: {{ user.phoneNumber }}</p>
+            <p class="text-xs mt-3 inline-block px-2 py-1 rounded-full bg-olive-50 text-olive-700 border border-olive-100">
+              {{ formatRole(user.role) }}
+            </p>
           </div>
+
           <div class="flex gap-2">
             <button (click)="startEdit(user)" class="w-9 h-9 flex items-center justify-center rounded-lg bg-earth-bg hover:bg-earth-card text-earth-text transition-colors" title="Modifier">
               <span class="material-symbols-outlined text-base">edit</span>
@@ -122,22 +160,20 @@
       </div>
 
       <div *ngIf="data.users.length === 0" class="col-span-full py-12 text-center text-earth-muted border-2 border-dashed border-earth-border rounded-xl">
-        Aucun utilisateur ne correspond à la gestion.
+        Aucun utilisateur ne correspond a la gestion.
       </div>
     </div>
 
     <div *ngIf="!isLoading && data.users.length > 0" class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p class="text-sm text-earth-muted">
-        Page <span class="font-medium text-earth-text">{{ currentPage + 1 }}</span> sur {{ totalPages }} — {{ totalElements }} au total
+        Page <span class="font-medium text-earth-text">{{ currentPage + 1 }}</span> sur {{ totalPages }} - {{ totalElements }} au total
       </p>
       <div class="flex items-center gap-2">
-        <button (click)="previousPage()" [disabled]="currentPage === 0"
-                class="inline-flex items-center gap-1 px-4 py-2 rounded-lg border border-earth-border bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
+        <button (click)="previousPage()" [disabled]="currentPage === 0" class="inline-flex items-center gap-1 px-4 py-2 rounded-lg border border-earth-border bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
           <span class="material-symbols-outlined text-base">chevron_left</span>
-          Précédent
+          Precedent
         </button>
-        <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1"
-                class="inline-flex items-center gap-1 px-4 py-2 rounded-lg border border-earth-border bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
+        <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1" class="inline-flex items-center gap-1 px-4 py-2 rounded-lg border border-earth-border bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors">
           Suivant
           <span class="material-symbols-outlined text-base">chevron_right</span>
         </button>
@@ -146,7 +182,7 @@
   </main>
 
   <div *ngIf="isDeleteModalOpen" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[9998]">
-    <div class="w-full max-w-md bg-white rounded-xl shadow-2xl border border-earth-border p-6 scale-in-center">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-2xl border border-earth-border p-6">
       <div class="flex items-center gap-3 mb-4">
         <div class="w-10 h-10 flex items-center justify-center rounded-full bg-red-100 text-red-600">
           <span class="material-symbols-outlined">warning</span>
@@ -159,7 +195,7 @@
       </p>
       <div class="flex justify-end gap-3">
         <button (click)="cancelDelete()" class="px-4 py-2 rounded-lg border border-earth-border hover:bg-gray-50 transition-colors">Annuler</button>
-        <button (click)="confirmDelete()" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 shadow-sm transition-colors">Supprimer définitivement</button>
+        <button (click)="confirmDelete()" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 shadow-sm transition-colors">Supprimer definitivement</button>
       </div>
     </div>
   </div>

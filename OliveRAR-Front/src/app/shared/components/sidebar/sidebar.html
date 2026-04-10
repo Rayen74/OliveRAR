@@ -1,37 +1,58 @@
-<aside class="flex flex-col w-64 h-screen px-5 py-8 overflow-y-auto bg-earth-card border-r border-earth-border">
-  <div class="flex items-center gap-2 px-2">
-    <div class="w-8 h-8 bg-olive-500 rounded-full flex items-center justify-center text-white font-bold">O</div>
-    <span class="text-xl font-bold text-earth-text">OliveConnect</span>
+<aside class="flex flex-col w-64 min-h-screen bg-white border-r border-gray-100 shadow-sm">
+  <div class="px-3 py-4 border-b border-gray-100">
+    <a
+      *ngIf="currentUser$ | async as currentUser"
+      routerLink="/responsable/profile"
+      class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#f7f4ec] border border-[#e4dcc8] shadow-sm transition-all duration-150 hover:shadow-md hover:border-olive-200"
+    >
+      <ng-container *ngIf="currentUser.imageUrl; else avatarFallbackTop">
+        <img
+          [src]="currentUser.imageUrl"
+          alt="avatar"
+          class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
+        >
+      </ng-container>
+      <ng-template #avatarFallbackTop>
+        <div class="w-12 h-12 rounded-full bg-olive-100 text-olive-700 flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm flex-shrink-0">
+          {{ getInitials(currentUser.prenom, currentUser.nom) }}
+        </div>
+      </ng-template>
+
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold text-earth-text truncate leading-tight">
+          {{ currentUser.prenom }} {{ currentUser.nom }}
+        </p>
+        <p class="mt-1 inline-flex max-w-full truncate rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-olive-700 border border-olive-100">
+          {{ formatRole(currentUser.role) }}
+        </p>
+      </div>
+    </a>
   </div>
 
-  <div class="flex flex-col justify-between flex-1 mt-6">
-    <nav class="flex-1 -mx-3 space-y-3">
-      <div class="relative">
-        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-        </span>
-      </div>
+  <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+    <a
+      *ngFor="let item of menuItems"
+      [routerLink]="item.link"
+      routerLinkActive="bg-olive-50 text-olive-700 font-semibold border-r-2 border-olive-500"
+      [routerLinkActiveOptions]="{ exact: item.link === '/responsable/profile' }"
+      class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-earth-text hover:bg-olive-50 hover:text-olive-700 transition-all duration-150 cursor-pointer group"
+    >
+      <span class="material-symbols-outlined text-[20px] text-earth-muted group-hover:text-olive-600 transition-colors">
+        {{ item.icon }}
+      </span>
+      <span>{{ item.label }}</span>
+    </a>
+  </nav>
 
-      <a *ngFor="let item of menuItems" [routerLink]="item.link" routerLinkActive="bg-olive-500 text-white"
-        class="flex items-center px-3 py-2 text-earth-text transition-colors duration-300 transform rounded-lg hover:bg-olive-200 hover:text-olive-900">
-        <span class="mx-2 font-medium">{{ item.label }}</span>
-      </a>
-
-      <button (click)="onLogout()"
-        class="flex items-center w-full px-3 py-2 mt-auto text-red-600 transition-colors duration-300 transform rounded-lg hover:bg-red-50">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-2" fill="none" viewBox="0 0 24 24"
-          stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-        <span class="font-medium">Déconnexion</span>
-      </button>
-    </nav>
-
-    <div class="mt-6">
-      <div class="p-3 bg-olive-50 rounded-lg">
-        <h2 class="text-sm font-medium text-olive-900">Statut Coopérative</h2>
-        <p class="mt-1 text-xs text-olive-700">Collecte en cours : Sfax Nord</p>
-      </div>
-    </div>
+  <div class="px-3 py-3 border-t border-gray-100">
+    <button
+      (click)="onLogout()"
+      class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150 group"
+    >
+      <span class="material-symbols-outlined text-[20px] text-red-400 group-hover:text-red-600 transition-colors">
+        logout
+      </span>
+      <span>Deconnexion</span>
+    </button>
   </div>
 </aside>

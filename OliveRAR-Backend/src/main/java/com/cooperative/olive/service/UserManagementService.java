@@ -53,7 +53,8 @@ public class UserManagementService {
             String regex = ".*" + Pattern.quote(name.trim()) + ".*";
             Criteria nameCriteria = new Criteria().orOperator(
                     Criteria.where("nom").regex(regex, "i"),
-                    Criteria.where("prenom").regex(regex, "i"));
+                    Criteria.where("prenom").regex(regex, "i")
+            );
             criteria = new Criteria().andOperator(criteria, nameCriteria);
         }
 
@@ -65,11 +66,18 @@ public class UserManagementService {
         return PageableExecutionUtils.getPage(users, pageable, () -> total);
     }
 
+    public User getUserById(String id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+    }
+
     public User createUser(User user) {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new RuntimeException("Cet email est deja utilise par un autre compte.");
         }
 
+        validateProfileFields(user);
+        validatePhoneNumber(user.getPhoneNumber());
         validatePassword(user.getPassword());
 
         if (user.getRole() == Role.RESPONSABLE_COOPERATIVE) {
@@ -83,23 +91,54 @@ public class UserManagementService {
 
     public User updateUser(String id, User userDetails) {
         User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        // 1. Mise à jour des champs de base
+        if (userRepository.existsByEmailAndIdNot(userDetails.getEmail(), id)) {
+            throw new RuntimeException("Cet email est deja utilise par un autre compte.");
+        }
+
+        validateProfileFields(userDetails);
+        validatePhoneNumber(userDetails.getPhoneNumber());
+
         existingUser.setNom(userDetails.getNom());
         existingUser.setPrenom(userDetails.getPrenom());
         existingUser.setEmail(userDetails.getEmail());
+        existingUser.setPhoneNumber(userDetails.getPhoneNumber());
         existingUser.setRole(userDetails.getRole());
 
-        // 2. Logique conditionnelle pour le mot de passe
         String newPassword = userDetails.getPassword();
         if (newPassword != null && !newPassword.trim().isEmpty()) {
-            // On n'appelle votre validation que si un nouveau mot de passe est saisi
             validatePassword(newPassword);
             existingUser.setPassword(passwordEncoder.encode(newPassword));
         }
-        // Si vide, existingUser.getPassword() reste l'ancien mot de passe
 
+        return userRepository.save(existingUser);
+    }
+
+    public User updateProfile(String id, User userDetails) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        if (userRepository.existsByEmailAndIdNot(userDetails.getEmail(), id)) {
+            throw new RuntimeException("Cet email est deja utilise par un autre compte.");
+        }
+
+        validateProfileFields(userDetails);
+        validatePhoneNumber(userDetails.getPhoneNumber());
+
+        existingUser.setNom(userDetails.getNom());
+        existingUser.setPrenom(userDetails.getPrenom());
+        existingUser.setEmail(userDetails.getEmail());
+        existingUser.setPhoneNumber(userDetails.getPhoneNumber());
+
+        return userRepository.save(existingUser);
+    }
+
+    public User updateProfileImage(String id, String imageUrl) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        existingUser.setImageUrl(imageUrl);
         return userRepository.save(existingUser);
     }
 
@@ -124,7 +163,36 @@ public class UserManagementService {
                 || !password.matches(".*[a-z].*")
                 || !password.matches(".*[@#$%^&+=!*?].*")) {
             throw new RuntimeException(
-                    "Le mot de passe doit contenir une majuscule, une minuscule, un chiffre et un caractere special.");
+                    "Le mot de passe doit contenir une majuscule, une minuscule, un chiffre et un caractere special."
+            );
+        }
+    }
+
+    private void validatePhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            throw new RuntimeException("Le numero de telephone est obligatoire.");
+        }
+
+        if (!phoneNumber.matches("\\d{8}")) {
+            throw new RuntimeException("Le numero de telephone doit contenir exactement 8 chiffres.");
+        }
+    }
+
+    private void validateProfileFields(User user) {
+        if (user.getPrenom() == null || user.getPrenom().isBlank()) {
+            throw new RuntimeException("Le prenom est obligatoire.");
+        }
+
+        if (user.getNom() == null || user.getNom().isBlank()) {
+            throw new RuntimeException("Le nom est obligatoire.");
+        }
+
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new RuntimeException("L email est obligatoire.");
+        }
+
+        if (!user.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            throw new RuntimeException("Le format de l email est invalide.");
         }
     }
 }
