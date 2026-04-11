@@ -5,9 +5,13 @@ import { ResetPasswordComponent } from './auth/reset-password/reset-password';
 import { DashboardComponent } from './responsableCooperative/components/dashboard/dashboard';
 import { UsersComponent } from './responsableCooperative/components/users/users';
 import { ProfileComponent } from './responsableCooperative/components/profile/profile';
+import { NotificationsresponsablecooperativeComponent } from './responsableCooperative/components/notificationsresponsablecooperative/notificationsresponsablecooperative';
+import { VergersComponent } from './agriculteur/components/vergers/vergers';
+import { NotificationsComponent } from './agriculteur/components/notifications/notifications';
+import { AgriculteurProfileComponent } from './agriculteur/components/profile/profile';
+import { agriculteurGuard } from './auth/agriculteur.guard';
 import { authGuard } from './auth/auth.guard';
 import { responsableCooperativeGuard } from './auth/responsable-cooperative.guard';
-
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
@@ -20,7 +24,18 @@ export const routes: Routes = [
       { path: 'dashboard', component: DashboardComponent },
       { path: 'users', component: UsersComponent },
       { path: 'profile', component: ProfileComponent },
+      { path: 'notifications', component: NotificationsresponsablecooperativeComponent },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+    ]
+  },
+  {
+    path: 'agriculteur',
+    canActivate: [authGuard, agriculteurGuard],
+    children: [
+      { path: 'vergers', component: VergersComponent },
+      { path: 'notifications', component: NotificationsComponent },
+      { path: 'profile', component: AgriculteurProfileComponent },
+      { path: '', redirectTo: 'vergers', pathMatch: 'full' }
     ]
   },
   { path: '**', redirectTo: 'login' }

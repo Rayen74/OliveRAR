@@ -1,0 +1,47 @@
+<aside class="flex flex-col w-64 min-h-screen bg-white border-r border-gray-100 shadow-sm">
+  <div class="px-3 py-4 border-b border-gray-100">
+    <ng-container *ngIf="currentUser$ | async as currentUser">
+      <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#f7f4ec] border border-[#e4dcc8] shadow-sm">
+        <ng-container *ngIf="currentUser.imageUrl; else avatarFallback">
+          <img [src]="currentUser.imageUrl" alt="avatar"
+               class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0">
+        </ng-container>
+        <ng-template #avatarFallback>
+          <div class="w-12 h-12 rounded-full bg-olive-100 text-olive-700 flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm flex-shrink-0">
+            {{ getInitials(currentUser.prenom, currentUser.nom) }}
+          </div>
+        </ng-template>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-earth-text truncate leading-tight">
+            {{ currentUser.prenom }} {{ currentUser.nom }}
+          </p>
+          <p class="mt-1 inline-flex max-w-full truncate rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-olive-700 border border-olive-100">
+            {{ formatRole(currentUser.role) }}
+          </p>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+    <a *ngFor="let item of menuItems"
+       [routerLink]="item.link"
+       routerLinkActive="bg-olive-50 text-olive-700 font-semibold border-r-2 border-olive-500"
+       class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-earth-text hover:bg-olive-50 hover:text-olive-700 transition-all duration-150 cursor-pointer group">
+      <span class="material-symbols-outlined text-[20px] text-earth-muted group-hover:text-olive-600 transition-colors">
+        {{ item.icon }}
+      </span>
+      <span>{{ item.label }}</span>
+    </a>
+  </nav>
+
+  <div class="px-3 py-3 border-t border-gray-100">
+    <button (click)="onLogout()"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150 group">
+      <span class="material-symbols-outlined text-[20px] text-red-400 group-hover:text-red-600 transition-colors">
+        logout
+      </span>
+      <span>Deconnexion</span>
+    </button>
+  </div>
+</aside>

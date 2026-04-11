@@ -16,4 +16,6 @@ public class Orchard {
     private String name;
     private String location;
     private String status;
+    private Double superficie;
+    private String agriculteurId; // lien avec l'agriculteur
 }
