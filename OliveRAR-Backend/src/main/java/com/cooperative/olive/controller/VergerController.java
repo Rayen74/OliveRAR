@@ -1,7 +1,7 @@
 package com.cooperative.olive.controller;
 
-import com.cooperative.olive.entity.Orchard;
-import com.cooperative.olive.service.OrchardService;
+import com.cooperative.olive.entity.Verger;
+import com.cooperative.olive.service.VergerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,39 +11,35 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/orchard")
+@RequestMapping("/api/verger")
 @RequiredArgsConstructor
-public class OrchardController {
+public class VergerController {
 
-    private final OrchardService orchardService;
+    private final VergerService vergerService;
 
-    // GET tous les vergers
     @GetMapping
-    public ResponseEntity<List<Orchard>> getAll() {
-        return ResponseEntity.ok(orchardService.getAll());
+    public ResponseEntity<List<Verger>> getAll() {
+        return ResponseEntity.ok(vergerService.getAll());
     }
 
-    // GET vergers par agriculteur
     @GetMapping("/agriculteur/{agriculteurId}")
-    public ResponseEntity<List<Orchard>> getByAgriculteur(@PathVariable String agriculteurId) {
-        return ResponseEntity.ok(orchardService.getByAgriculteur(agriculteurId));
+    public ResponseEntity<List<Verger>> getByAgriculteur(@PathVariable String agriculteurId) {
+        return ResponseEntity.ok(vergerService.getByAgriculteur(agriculteurId));
     }
 
-    // GET un verger par id
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable String id) {
         try {
-            return ResponseEntity.ok(orchardService.getById(id));
+            return ResponseEntity.ok(vergerService.getById(id));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
         }
     }
 
-    // POST créer un verger
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Orchard orchard) {
+    public ResponseEntity<?> create(@RequestBody Verger verger) {
         try {
-            Orchard created = orchardService.create(orchard);
+            Verger created = vergerService.create(verger);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                     "success", true,
                     "data", created,
@@ -54,11 +50,10 @@ public class OrchardController {
         }
     }
 
-    // PUT modifier un verger
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable String id, @RequestBody Orchard orchard) {
+    public ResponseEntity<?> update(@PathVariable String id, @RequestBody Verger verger) {
         try {
-            Orchard updated = orchardService.update(id, orchard);
+            Verger updated = vergerService.update(id, verger);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", updated,
@@ -69,11 +64,10 @@ public class OrchardController {
         }
     }
 
-    // DELETE supprimer un verger
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable String id) {
         try {
-            orchardService.delete(id);
+            vergerService.delete(id);
             return ResponseEntity.ok(Map.of("success", true, "message", "Verger supprimé avec succès"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));

@@ -130,9 +130,12 @@ export class LoginComponent {
           this.authService.setSession(token, response.user);
           this.showNotification('Connexion réussie ! Bienvenue.', 'success');
 
-          const redirectPath = response.user.role === Role.RESPONSABLE_COOPERATIVE
-            ? '/responsable/dashboard'
-            : '/login';
+         let redirectPath = '/login';
+         if (response.user.role === Role.RESPONSABLE_COOPERATIVE) {
+           redirectPath = '/responsable/dashboard';
+         } else if (response.user.role === Role.AGRICULTEUR) {
+           redirectPath = '/agriculteur/vergers';
+         }
 
           setTimeout(() => {
             this.router.navigate([redirectPath]);

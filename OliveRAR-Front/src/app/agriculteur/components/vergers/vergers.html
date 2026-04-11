@@ -1,0 +1,196 @@
+<div class="flex min-h-screen bg-earth-bg">
+  <app-agriculteur-sidebar></app-agriculteur-sidebar>
+
+  <main class="flex-1 p-8">
+    <header class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Mes Vergers</h1>
+        <p class="text-earth-muted text-sm">Gérez vos vergers oléicoles</p>
+      </div>
+      <button (click)="openCreate()"
+              class="px-4 py-2 bg-olive-600 text-white rounded-lg hover:bg-olive-700 transition-colors flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">add</span>
+        Nouveau Verger
+      </button>
+    </header>
+
+    <div *ngIf="loading" class="text-center text-earth-muted py-10">
+      Chargement...
+    </div>
+
+    <div *ngIf="error && !showModal"
+         class="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
+      {{ error }}
+    </div>
+
+    <div *ngIf="!loading">
+      <div *ngIf="vergers.length === 0"
+           class="text-center text-earth-muted py-16 bg-white rounded-xl border border-earth-border">
+        <span class="material-symbols-outlined text-5xl text-earth-muted">forest</span>
+        <p class="mt-2 text-lg font-medium">Aucun verger trouvé</p>
+        <p class="text-sm mt-1">Cliquez sur "Nouveau Verger" pour commencer</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div *ngFor="let verger of vergers"
+             class="p-6 bg-white border border-earth-border rounded-xl shadow-sm hover:shadow-md transition-all">
+
+          <!-- Header carte -->
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-olive-600 text-2xl">forest</span>
+              <h2 class="text-lg font-semibold text-earth-text">{{ verger.nom }}</h2>
+            </div>
+            <span class="px-2 py-1 text-xs rounded-full" [ngClass]="getStatutClass(verger.statut)">
+              {{ getStatutLabel(verger.statut) }}
+            </span>
+          </div>
+
+          <!-- Infos -->
+          <div class="space-y-1 text-sm text-earth-muted">
+            <p>📍 {{ verger.localisation }}</p>
+            <p>🌳 {{ verger.nombreArbres }} arbres · {{ verger.superficie }} ha</p>
+            <p>🫒 {{ verger.typeOlive }}</p>
+            <p>⚖️ Rendement estimé : {{ verger.rendementEstime }} kg</p>
+          </div>
+
+          <!-- Alerte récolte -->
+          <div *ngIf="verger.statut === 'PRET_POUR_RECOLTE'"
+               class="mt-3 p-2 bg-olive-50 border border-olive-200 rounded-lg text-xs text-olive-700 flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm">notifications_active</span>
+            Notification envoyée aux responsables
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-2 mt-4 pt-4 border-t border-earth-border">
+            <button (click)="openEdit(verger)"
+                    class="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg border border-earth-border hover:bg-earth-bg transition-colors text-earth-text">
+              <span class="material-symbols-outlined text-base">edit</span>
+              Modifier
+            </button>
+            <button (click)="confirmDelete(verger)"
+                    class="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg border border-red-200 hover:bg-red-50 transition-colors text-red-500">
+              <span class="material-symbols-outlined text-base">delete</span>
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Créer/Modifier -->
+<div *ngIf="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <h2 class="text-xl font-semibold text-earth-text mb-4">
+      {{ isEditing ? 'Modifier le verger' : 'Nouveau verger' }}
+    </h2>
+
+    <div *ngIf="error"
+         class="mb-3 p-2 bg-red-50 text-red-600 text-sm rounded-lg">{{ error }}</div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-earth-text mb-1">Nom du verger *</label>
+        <input [(ngModel)]="currentVerger.nom" placeholder="Ex: Verger Nord"
+               class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-earth-text mb-1">Localisation *</label>
+        <input [(ngModel)]="currentVerger.localisation" placeholder="Ex: Sfax, Route de Tunis km 5"
+               class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-earth-text mb-1">Superficie (ha)</label>
+        <input [(ngModel)]="currentVerger.superficie" type="number" min="0"
+               class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-earth-text mb-1">Nombre d'arbres</label>
+        <input [(ngModel)]="currentVerger.nombreArbres" type="number" min="0"
+               class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-earth-text mb-1">Type d'olive</label>
+        <select [(ngModel)]="currentVerger.typeOlive"
+                class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+          <option value="Chemlali">Chemlali</option>
+          <option value="Zalmati">Zalmati</option>
+          <option value="Oueslati">Oueslati</option>
+          <option value="Gerboui">Gerboui</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-earth-text mb-1">Rendement estimé (kg)</label>
+        <input [(ngModel)]="currentVerger.rendementEstime" type="number" min="0"
+               class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-earth-text mb-1">Latitude</label>
+        <input [(ngModel)]="currentVerger.latitude" type="number"
+               class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-earth-text mb-1">Longitude</label>
+        <input [(ngModel)]="currentVerger.longitude" type="number"
+               class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-earth-text mb-1">Statut</label>
+        <select [(ngModel)]="currentVerger.statut"
+                class="w-full px-3 py-2.5 border rounded-xl border-earth-border focus:ring-1 focus:ring-olive-500 outline-none">
+          <option value="EN_CROISSANCE">En croissance</option>
+          <option value="PRET_POUR_RECOLTE">🔔 Prêt pour récolte (notifie les responsables)</option>
+          <option value="TERMINE">Terminé</option>
+        </select>
+        <p *ngIf="currentVerger.statut === 'PRET_POUR_RECOLTE'"
+           class="mt-1 text-xs text-olive-600">
+          ⚠️ Une notification sera envoyée au Responsable Logistique et Coopérative
+        </p>
+      </div>
+    </div>
+
+    <div class="flex gap-3 mt-6">
+      <button (click)="save()" [disabled]="isSaving"
+              class="flex-1 px-4 py-2.5 bg-olive-600 text-white rounded-xl hover:bg-olive-700 disabled:opacity-50 transition-colors">
+        {{ isSaving ? 'Sauvegarde...' : (isEditing ? 'Modifier' : 'Créer') }}
+      </button>
+      <button (click)="closeModal()"
+              class="flex-1 px-4 py-2.5 border border-earth-border text-earth-text rounded-xl hover:bg-earth-bg transition-colors">
+        Annuler
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Suppression -->
+<div *ngIf="showDeleteModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 text-center">
+    <span class="material-symbols-outlined text-5xl text-red-400">warning</span>
+    <h2 class="text-xl font-semibold text-earth-text mt-3">Supprimer le verger ?</h2>
+    <p class="text-earth-muted text-sm mt-2">
+      Voulez-vous vraiment supprimer
+      <strong>{{ vergerToDelete?.nom }}</strong> ?
+      Cette action est irréversible.
+    </p>
+    <div class="flex gap-3 mt-6">
+      <button (click)="deleteVerger()"
+              class="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors">
+        Supprimer
+      </button>
+      <button (click)="showDeleteModal = false"
+              class="flex-1 px-4 py-2.5 border border-earth-border text-earth-text rounded-xl hover:bg-earth-bg transition-colors">
+        Annuler
+      </button>
+    </div>
+  </div>
+</div>
