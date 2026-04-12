@@ -1,0 +1,8 @@
+<div class="verger-map-shell" [style.minHeight.px]="mapHeight">
+  <div #mapHost class="verger-map-host"></div>
+
+  <div *ngIf="!hasVisibleData" class="verger-map-empty-state">
+    <span class="material-symbols-outlined text-3xl">map</span>
+    <p>{{ emptyMessage }}</p>
+  </div>
+</div>

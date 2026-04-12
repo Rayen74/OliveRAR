@@ -1,0 +1,10 @@
+<div class="rounded-2xl border border-alert-500 bg-red-50 p-4 text-sm text-alert-700">
+  <div class="flex items-start gap-3">
+    <span class="text-xl">⚠️</span>
+    <div>
+      <div class="font-semibold">Erreur de réinitialisation</div>
+      <div class="mt-1">{{ message }}</div>
+      <div *ngIf="details" class="mt-2 text-xs text-alert-600">{{ details }}</div>
+    </div>
+  </div>
+</div>
