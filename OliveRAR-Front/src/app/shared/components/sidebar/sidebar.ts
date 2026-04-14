@@ -19,7 +19,9 @@ export class SidebarComponent implements OnInit {
     { link: '/responsable/dashboard', label: 'Tableau de bord', icon: 'dashboard' },
     { link: '/responsable/notifications', label: 'Notifications', icon: 'notifications' },
     { link: '/responsable/users', label: 'Utilisateurs', icon: 'group' },
-    { link: '/responsable/profile', label: 'Mon profil', icon: 'person' }
+    { link: '/responsable/collectes', label: 'Mes collectes', icon: 'event' },
+    { link: '/responsable/collectes/calendrier', label: 'Calendrier', icon: 'calendar_month' },
+    { link: '/responsable/profile', label: 'Mon profil', icon: 'person' },
   ];
 
   constructor(

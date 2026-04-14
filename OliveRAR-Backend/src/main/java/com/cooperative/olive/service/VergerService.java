@@ -23,6 +23,10 @@ public class VergerService {
         return vergerRepository.findAll();
     }
 
+    public List<Verger> getReadyVergers() {
+        return vergerRepository.findByStatut("PRET_POUR_RECOLTE");
+    }
+
     public PaginatedResponse<Verger> getAllPaginated(int page, int limit) {
         Pageable pageable = buildPageable(page, limit);
         Page<Verger> vergerPage = vergerRepository.findAll(pageable);

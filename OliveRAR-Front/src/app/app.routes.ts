@@ -9,6 +9,8 @@ import { NotificationsresponsablecooperativeComponent } from './responsableCoope
 import { VergersComponent } from './agriculteur/components/vergers/vergers';
 import { NotificationsComponent } from './agriculteur/components/notifications/notifications';
 import { AgriculteurProfileComponent } from './agriculteur/components/profile/profile';
+import { CollectesComponent } from './responsableCooperative/components/collectes/collectes';
+import { CollecteCalendarComponent } from './responsableCooperative/components/collecte-calendar/collecte-calendar';
 import { agriculteurGuard } from './auth/agriculteur.guard';
 import { authGuard } from './auth/auth.guard';
 import { responsableCooperativeGuard } from './auth/responsable-cooperative.guard';
@@ -25,6 +27,8 @@ export const routes: Routes = [
       { path: 'users', component: UsersComponent },
       { path: 'profile', component: ProfileComponent },
       { path: 'notifications', component: NotificationsresponsablecooperativeComponent },
+      { path: 'collectes', component: CollectesComponent },
+      { path: 'collectes/calendrier', component: CollecteCalendarComponent },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

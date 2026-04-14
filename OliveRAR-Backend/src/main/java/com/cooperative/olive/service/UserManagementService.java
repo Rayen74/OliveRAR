@@ -1,6 +1,7 @@
 package com.cooperative.olive.service;
 
 import com.cooperative.olive.dao.UserRepository;
+import com.cooperative.olive.entity.Ouvrier;
 import com.cooperative.olive.entity.Role;
 import com.cooperative.olive.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -86,6 +87,19 @@ public class UserManagementService {
 
         user.setId(null);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+        
+        if (user.getRole() == Role.OUVRIER) {
+            Ouvrier ouvrier = new Ouvrier();
+            ouvrier.setNom(user.getNom());
+            ouvrier.setPrenom(user.getPrenom());
+            ouvrier.setEmail(user.getEmail());
+            ouvrier.setPhoneNumber(user.getPhoneNumber());
+            ouvrier.setRole(user.getRole());
+            ouvrier.setPassword(user.getPassword());
+            ouvrier.setImageUrl(user.getImageUrl());
+            return userRepository.save(ouvrier);
+        }
+        
         return userRepository.save(user);
     }
 
@@ -110,6 +124,21 @@ public class UserManagementService {
         if (newPassword != null && !newPassword.trim().isEmpty()) {
             validatePassword(newPassword);
             existingUser.setPassword(passwordEncoder.encode(newPassword));
+        }
+
+        if (userDetails.getRole() == Role.OUVRIER && !(existingUser instanceof Ouvrier)) {
+            // Need to convert existing User to Ouvrier
+            Ouvrier ouvrier = new Ouvrier();
+            ouvrier.setId(existingUser.getId());
+            ouvrier.setNom(existingUser.getNom());
+            ouvrier.setPrenom(existingUser.getPrenom());
+            ouvrier.setEmail(existingUser.getEmail());
+            ouvrier.setPhoneNumber(existingUser.getPhoneNumber());
+            ouvrier.setRole(existingUser.getRole());
+            ouvrier.setPassword(existingUser.getPassword());
+            ouvrier.setImageUrl(existingUser.getImageUrl());
+            userRepository.deleteById(existingUser.getId());
+            return userRepository.save(ouvrier);
         }
 
         return userRepository.save(existingUser);
@@ -140,6 +169,17 @@ public class UserManagementService {
 
         existingUser.setImageUrl(imageUrl);
         return userRepository.save(existingUser);
+    }
+
+    public List<User> getUsersByRole(Role role) {
+        return userRepository.findByRole(role);
+    }
+
+    public List<User> getUsersByRoleAndDisponibilite(Role role, String disponibilite) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("role").is(role.name()));
+        query.addCriteria(Criteria.where("disponibilite").is(disponibilite));
+        return mongoTemplate.find(query, User.class);
     }
 
     public void deleteUser(String id) {

@@ -48,6 +48,11 @@ public class VergerController {
         return ResponseEntity.ok(vergerService.getByAgriculteur(agriculteurId));
     }
 
+    @GetMapping("/ready")
+    public ResponseEntity<?> getReady() {
+        return ResponseEntity.ok(vergerService.getReadyVergers());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable String id) {
         try {

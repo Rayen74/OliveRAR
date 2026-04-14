@@ -27,7 +27,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly vergerSearch$ = new Subject<string>();
 
-  constructor(private readonly vergerApi: VergerApiService) {}
+  constructor(private readonly vergerApi: VergerApiService) { }
 
   ngOnInit(): void {
     this.vergerSearch$

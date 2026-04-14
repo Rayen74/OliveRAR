@@ -58,6 +58,32 @@ public class UserManagementController {
         ));
     }
 
+    /**
+     * GET /api/users/by-role?role=OUVRIER&disponibilite=DISPONIBLE
+     * Returns users filtered by role. If disponibilite is provided, filters further
+     * (relevant for OUVRIER whose disponibilite is stored on the Ouvrier subclass).
+     */
+    @GetMapping("/by-role")
+    public ResponseEntity<?> getUsersByRole(
+            @RequestParam String role,
+            @RequestParam(required = false) String disponibilite) {
+        try {
+            Role filterRole = Role.valueOf(role);
+            java.util.List<User> users;
+            if (disponibilite != null && !disponibilite.isBlank()) {
+                users = userManagementService.getUsersByRoleAndDisponibilite(filterRole, disponibilite);
+            } else {
+                users = userManagementService.getUsersByRole(filterRole);
+            }
+            return ResponseEntity.ok(Map.of("success", true, "users", users));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Role invalide"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable String id) {
         try {

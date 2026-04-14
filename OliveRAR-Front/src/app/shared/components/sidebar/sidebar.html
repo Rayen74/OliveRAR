@@ -36,7 +36,7 @@
       *ngFor="let item of menuItems"
       [routerLink]="item.link"
       routerLinkActive="border-r-2 border-olive-500 bg-olive-50 font-semibold text-olive-700"
-      [routerLinkActiveOptions]="{ exact: item.link === '/responsable/profile' }"
+      [routerLinkActiveOptions]="{ exact: item.link === '/responsable/profile' || item.link === '/responsable/collectes' }"
       class="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-earth-text transition-all duration-150 hover:bg-olive-50 hover:text-olive-700"
     >
       <span class="material-symbols-outlined text-[20px] text-earth-muted transition-colors group-hover:text-olive-600">

@@ -43,12 +43,14 @@ export class UsersComponent implements OnInit {
   readonly roleFilterOptions: Array<Exclude<Role, Role.RESPONSABLE_COOPERATIVE>> = [
     Role.AGRICULTEUR,
     Role.RESPONSABLE_LOGISTIQUE,
-    Role.RESPONSABLE_CHEF_RECOLTE
+    Role.RESPONSABLE_CHEF_RECOLTE,
+    Role.OUVRIER
   ];
   readonly manageableRoles: Array<Exclude<Role, Role.RESPONSABLE_COOPERATIVE>> = [
     Role.AGRICULTEUR,
     Role.RESPONSABLE_LOGISTIQUE,
-    Role.RESPONSABLE_CHEF_RECOLTE
+    Role.RESPONSABLE_CHEF_RECOLTE,
+    Role.OUVRIER
   ];
 
   constructor(

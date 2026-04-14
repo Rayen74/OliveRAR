@@ -10,4 +10,5 @@ import java.util.List;
 public interface VergerRepository extends MongoRepository<Verger, String> {
     List<Verger> findByAgriculteurId(String agriculteurId);
     Page<Verger> findByAgriculteurId(String agriculteurId, Pageable pageable);
+    List<Verger> findByStatut(String statut);
 }
