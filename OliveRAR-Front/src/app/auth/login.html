@@ -1,0 +1,125 @@
+<ng-container>
+
+  <!-- Floating Toast Notification - outside main container to avoid clipping -->
+  <div *ngIf="toast.show"
+       id="auth-toast"
+       style="position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border: 1px solid; backdrop-filter: blur(12px); min-width: 280px; max-width: 420px;"
+       [style.background-color]="toast.type === 'success' ? '#f0fdf4' : '#fef2f2'"
+       [style.border-color]="toast.type === 'success' ? '#86efac' : '#fca5a5'"
+       [style.color]="toast.type === 'success' ? '#166534' : '#991b1b'">
+    <span class="material-symbols-outlined" style="font-size: 20px; flex-shrink: 0;">
+      {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+    </span>
+    <span style="font-size: 14px; font-weight: 500; line-height: 1.4;">{{ toast.message }}</span>
+  </div>
+
+  <div class="min-h-screen flex font-sans">
+
+  <!-- ─── LEFT PANEL — Form ─────────────────────────────────── -->
+  <div class="flex flex-col justify-between w-full max-w-md px-12 py-10 bg-white">
+
+    <!-- Logo -->
+    <div class="flex items-center gap-2">
+      <img src="Logo.png" alt="CoopOléicole" class="w-8 h-8 rounded-lg object-contain" />
+      <span class="text-sm font-semibold text-olive-900">CoopOléicole</span>
+    </div>
+
+    <!-- Form section -->
+    <div>
+      <h1 class="text-3xl font-semibold text-olive-900 mb-1">Bienvenue</h1>
+      <p class="text-sm text-earth-muted mb-8">
+        Connectez-vous à votre espace de gestion
+      </p>
+
+      <!-- Error banner -->
+      <div *ngIf="errorMsg" class="flex items-center gap-2 border border-alert-500 bg-red-50
+                  text-alert-500 text-sm rounded-lg px-4 py-3 mb-5">
+        <span class="material-symbols-outlined" style="font-size:15px">warning</span>
+        {{ errorMsg }}
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+
+        <!-- Email -->
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-earth-text mb-1.5">
+            Adresse email
+          </label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-earth-muted" style="font-size:15px">mail</span>
+            <input type="email" formControlName="email" placeholder="vous@cooperative.tn" class="w-full pl-9 pr-4 py-2.5 rounded-lg border text-sm
+                     text-earth-text placeholder-earth-muted outline-none
+                     border-earth-border bg-earth-bg
+                     focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20
+                     transition-colors" />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-medium text-earth-text">
+              Mot de passe
+            </label>
+            <a routerLink="/forgot-password" class="text-xs text-olive-500 hover:text-olive-700 transition-colors">
+              Mot de passe oublié ?
+            </a>
+          </div>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-earth-muted" style="font-size:15px">lock</span>
+            <input [type]="showPwd ? 'text' : 'password'" formControlName="password" placeholder="••••••••" class="w-full pl-9 pr-10 py-2.5 rounded-lg border text-sm
+                     text-earth-text placeholder-earth-muted outline-none
+                     border-earth-border bg-earth-bg
+                     focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20
+                     transition-colors" />
+            <button type="button" (click)="togglePwd()" class="absolute right-3 top-1/2 -translate-y-1/2
+                           text-earth-muted hover:text-olive-700 transition-colors" style="font-size:15px">
+              <span class="material-symbols-outlined" style="font-size:15px">{{ showPwd ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" [disabled]="loading" class="w-full py-2.5 rounded-lg font-medium text-sm text-white
+                 bg-olive-700 hover:bg-olive-900
+                 disabled:opacity-60 disabled:cursor-not-allowed
+                 transition-colors">
+          <span *ngIf="!loading">Se connecter</span>
+          <span *ngIf="loading" class="flex items-center justify-center gap-2">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            Connexion...
+          </span>
+        </button>
+
+      </form>
+
+      <!-- Account creation removed: only Responsable Cooperative can create users -->
+    </div>
+
+    <!-- Footer -->
+    <p class="text-xs text-earth-muted text-center">
+      © 2026 Coopérative Oléicole de Sfax. Tous droits réservés.
+    </p>
+
+  </div>
+
+  <!-- ─── RIGHT PANEL — Full-cover photo slideshow ─────────── -->
+  <div class="hidden lg:block flex-1 relative overflow-hidden">
+
+    <!-- Crossfade photos filling the entire panel -->
+    <img *ngFor="let photo of photos; let i = index" [src]="photo" class="photo-slide"
+      [style.animation-delay]="(i * 5) + 's'" alt="Vergers oléicoles" />
+
+    <!-- Subtle dark overlay -->
+    <div class="absolute inset-0 bg-olive-900/40 z-10"></div>
+
+
+
+  </div>
+
+  </div>
+
+</ng-container>

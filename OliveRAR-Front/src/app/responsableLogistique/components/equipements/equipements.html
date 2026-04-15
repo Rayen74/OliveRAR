@@ -1,0 +1,56 @@
+<div class="flex min-h-screen bg-earth-bg">
+
+  <app-res-log-sidebar></app-res-log-sidebar>
+  <main class="flex-1 p-8">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold text-earth-text">Gérer les approvisionnements</h1>
+      <p class="text-earth-muted text-sm">Suivi du stock de matériel et intrants de la coopérative</p>
+    </header>
+
+    <div *ngIf="loading" class="flex items-center gap-3 text-earth-muted my-10">
+      <div class="w-5 h-5 border-2 border-olive-600 border-t-transparent rounded-full animate-spin"></div>
+      Chargement du stock...
+    </div>
+
+    <div *ngIf="!loading" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div *ngFor="let item of approvisionnements"
+           class="p-6 bg-white border border-earth-border rounded-xl shadow-sm hover:shadow-md transition-all">
+
+        <div class="flex justify-between">
+          <div>
+            <h3 class="font-semibold text-earth-text">{{ item.nom }}</h3>
+            <p class="text-sm text-earth-muted">{{ item.categorie }}</p>
+          </div>
+          <span [class]="'text-xs px-3 py-1 rounded-full border ' + getEtatClass(item.etat)">
+            {{ item.etat }}
+          </span>
+        </div>
+
+        <div class="mt-6">
+          <div class="flex justify-between items-end">
+            <div>
+              <span class="text-4xl font-bold text-earth-text">{{ item.quantiteStock }}</span>
+              <span class="text-earth-muted ml-1">{{ item.unite }}</span>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-earth-muted">Stock minimum</p>
+              <p class="font-medium">{{ item.quantiteMin }} {{ item.unite }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-earth-border text-xs text-earth-muted">
+          Dernière mise à jour : {{ item.derniereMiseAJour }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bouton d'action principal -->
+    <div class="fixed bottom-8 right-8">
+      <button class="flex items-center gap-3 bg-olive-600 hover:bg-olive-700 text-white px-6 py-3.5 rounded-2xl shadow-lg transition-all">
+        <span class="material-symbols-outlined">add_circle</span>
+        Ajouter / Mettre à jour stock
+      </button>
+    </div>
+  </main>
+</div>
