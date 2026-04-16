@@ -1,0 +1,183 @@
+<div class="flex h-screen bg-gray-50">
+
+  <!-- SIDEBAR -->
+  <app-agriculteur-sidebar></app-agriculteur-sidebar>
+
+  <!-- MAIN -->
+  <main class="flex-1 overflow-y-auto p-8">
+
+    <!-- HEADER -->
+    <div class="mb-8 flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800">Communauté OliveRAR</h1>
+        <p class="text-gray-500">Échangez avec les autres agriculteurs.</p>
+      </div>
+
+      <button (click)="showForm = !showForm"
+              class="bg-olive-600 hover:bg-olive-700 text-white px-6 py-2 rounded-lg font-medium shadow-md">
+        {{ showForm ? 'Annuler' : '+ Nouveau Post' }}
+      </button>
+    </div>
+
+    <!-- FORMULAIRE POST -->
+    <div *ngIf="showForm" class="mb-8 bg-white p-6 rounded-xl shadow-sm border">
+
+      <h2 class="text-lg font-semibold mb-4">Créer un post</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <input [(ngModel)]="nouveauPost.titre"
+               placeholder="Titre"
+               class="p-2 border rounded-lg w-full">
+
+        <select [(ngModel)]="nouveauPost.categorie"
+                class="p-2 border rounded-lg w-full">
+          <option value="" disabled>Catégorie</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <textarea [(ngModel)]="nouveauPost.contenu"
+                placeholder="Votre message..."
+                rows="4"
+                class="w-full p-2 border rounded-lg mb-4"></textarea>
+
+      <button (click)="soumettre()"
+              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+        Publier
+      </button>
+    </div>
+
+    <!-- FILTRES -->
+    <div class="flex gap-4 mb-6">
+      <select [(ngModel)]="filtreCategorie"
+              (change)="appliquerFiltres()"
+              class="p-2 bg-white border rounded-md text-sm">
+        <option value="">Toutes les catégories</option>
+        <option *ngFor="let cat of categories" [value]="cat">{{cat}}</option>
+      </select>
+
+      <select [(ngModel)]="filtreRegion"
+              (change)="appliquerFiltres()"
+              class="p-2 bg-white border rounded-md text-sm">
+        <option value="">Toutes les régions</option>
+        <option *ngFor="let reg of regions" [value]="reg">{{reg}}</option>
+      </select>
+    </div>
+
+    <!-- LISTE POSTS -->
+    <div class="grid gap-6">
+
+      <div *ngFor="let post of posts; trackBy: trackByPost"
+           class="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition">
+
+        <!-- ================= EDIT MODE ================= -->
+        <div *ngIf="editingPost?.id === post.id">
+
+          <input [(ngModel)]="editForm.titre"
+                 class="w-full p-2 border rounded mb-2">
+
+          <textarea [(ngModel)]="editForm.contenu"
+                    class="w-full p-2 border rounded mb-2"></textarea>
+
+          <div class="flex gap-2">
+            <button (click)="sauvegarderEdit()"
+                    class="bg-green-600 text-white px-3 py-1 rounded">
+              Sauvegarder
+            </button>
+
+            <button (click)="editingPost = null"
+                    class="bg-gray-200 px-3 py-1 rounded">
+              Annuler
+            </button>
+          </div>
+
+        </div>
+
+        <!-- ================= VIEW MODE ================= -->
+        <div *ngIf="editingPost?.id !== post.id"
+             (click)="ouvrirPost(post.id)"
+             class="cursor-pointer">
+
+          <!-- HEADER POST -->
+          <div class="flex justify-between items-start mb-3">
+
+            <span [class]="'px-3 py-1 rounded-full text-xs font-bold ' + getBadgeClass(post.categorie)">
+              {{ post.categorie }}
+            </span>
+
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400">{{ post.region }}</span>
+
+              <!-- ACTIONS USER -->
+              <ng-container *ngIf="post.agriculteurId === agriculteurId">
+
+                <button (click)="startEdit($event, post)"
+                        class="text-gray-400 hover:text-blue-500">
+                  ✏️
+                </button>
+
+                <button (click)="supprimerPost($event, post.id)"
+                        class="text-gray-400 hover:text-red-500">
+                  🗑️
+                </button>
+
+              </ng-container>
+            </div>
+          </div>
+
+          <!-- CONTENT -->
+          <h3 class="text-xl font-bold text-gray-800 mb-2">
+            {{ post.titre }}
+          </h3>
+
+          <p class="text-gray-600 mb-4 line-clamp-3">
+            {{ post.contenu }}
+          </p>
+
+          <!-- FOOTER -->
+          <div class="flex justify-between items-center border-t pt-3">
+
+            <div class="flex gap-4">
+
+              <!-- LIKE -->
+              <button (click)="toggleLike($event, post)"
+                      class="flex items-center gap-1"
+                      [class]="isLiked(post) ? 'text-red-500' : 'text-gray-400 hover:text-red-400'">
+
+                <span>{{ isLiked(post) ? '❤️' : '🤍' }}</span>
+                <span>{{ post.likes.length }}</span>
+              </button>
+
+              <!-- COMMENT -->
+              <div class="flex items-center gap-1 text-gray-400">
+                💬 {{ post.nombreCommentaires }}
+              </div>
+
+            </div>
+
+            <span class="text-xs text-olive-600 font-medium">
+              Voir →
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- LOADING -->
+    <div *ngIf="loading" class="text-center py-10 text-gray-500">
+      Chargement...
+    </div>
+
+    <!-- EMPTY -->
+    <div *ngIf="!loading && posts.length === 0"
+         class="text-center py-10 bg-white rounded-xl border-2 border-dashed">
+      Aucun post pour le moment
+    </div>
+
+  </main>
+
+</div>

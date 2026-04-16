@@ -2,20 +2,39 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../auth/auth.service';
+import { MatIconModule } from '@angular/material/icon'
 
 @Component({
   selector: 'app-agriculteur-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule,MatIconModule],
   templateUrl: './agriculteur-sidebar.html'
 })
 export class AgriculteurSidebarComponent {
+
   readonly currentUser$;
 
   menuItems = [
-    { link: '/agriculteur/vergers', label: 'Mes Vergers', icon: 'forest' },
-    { link: '/agriculteur/notifications', label: 'Notifications Collecte', icon: 'notifications' },
-    { link: '/agriculteur/profile', label: 'Mon Profil', icon: 'person' },
+    {
+      link: '/agriculteur/vergers',
+      label: 'Mes Vergers',
+      icon: 'forest'
+    },
+    {
+      link: '/agriculteur/notifications',
+      label: 'Notifications Collecte',
+      icon: 'notifications'
+    },
+    {
+      link: '/agriculteur/communaute',
+      label: 'Communauté',
+      icon: 'groups'
+    },
+    {
+      link: '/agriculteur/profile',
+      label: 'Mon Profil',
+      icon: 'person'
+    }
   ];
 
   constructor(private authService: AuthService, private router: Router) {

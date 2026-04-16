@@ -3,10 +3,15 @@ package com.cooperative.olive.service;
 import com.cooperative.olive.dao.AlertRepository;
 import com.cooperative.olive.dao.UserRepository;
 import com.cooperative.olive.entity.Alert;
+import com.cooperative.olive.entity.Post;
 import com.cooperative.olive.entity.User;
 import com.cooperative.olive.entity.Verger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -19,6 +24,7 @@ public class AlertService {
 
     private final AlertRepository alertRepository;
     private final UserRepository userRepository;
+    private final MongoTemplate mongoTemplate;
 
     public void envoyerNotificationVergerPret(Verger verger, String agriculteurId) {
         User agriculteur = userRepository.findById(agriculteurId).orElse(null);
@@ -83,5 +89,25 @@ public class AlertService {
         List<Alert> alerts = alertRepository.findByVergerId(vergerId);
         alertRepository.deleteAll(alerts);
         log.info("Alertes supprimees pour verger: {}", vergerId);
+    }
+    public void envoyerNotificationCommentaire(Post post, String nomCommentateur) {
+        String description = nomCommentateur + " a commenté votre post : \"" + post.getTitre() + "\"";
+
+        Query query = new Query(
+                Criteria.where("postId").is(post.getId())
+                        .and("destinataireRole").is("NOTIF_COMMENTAIRE_" + post.getAgriculteurId())
+        );
+
+        Update update = new Update()
+                .set("type", "COMMENTAIRE")
+                .set("description", description)
+                .set("timestamp", LocalDateTime.now().toString())
+                .set("postId", post.getId())
+                .set("destinataireRole", "AGRICULTEUR")
+                .set("agriculteurId", post.getAgriculteurId())
+                .set("lu", false)
+                .setOnInsert("createdAt", LocalDateTime.now());
+
+        mongoTemplate.upsert(query, update, Alert.class);
     }
 }

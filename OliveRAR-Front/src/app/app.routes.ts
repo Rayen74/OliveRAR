@@ -21,7 +21,9 @@ import { responsableCooperativeGuard } from './auth/responsable-cooperative.guar
 // Responsable chef recolte
   import { responsableChefRecolteProfileComponent } from './responsableChefRecolte/components/profile/profile';
   import { ResponsableChefRecolteGuard } from './auth/responsable-chef-recolte.guard';   // ← Correction ici
-
+//communaute agriculteur
+import { CommunauteComponent } from './agriculteur/components/communaute/communaute';
+import { PostDetailComponent } from './agriculteur/components/communaute/post-detail/post-detail';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
@@ -47,6 +49,8 @@ export const routes: Routes = [
       { path: 'vergers', component: VergersComponent },
       { path: 'notifications', component: NotificationsComponent },
       { path: 'profile', component: AgriculteurProfileComponent },
+      { path: 'communaute', component: CommunauteComponent },         // ✅ Déplacé ici
+      { path: 'communaute/:id', component: PostDetailComponent },     // ✅ Déplacé ici
       { path: '', redirectTo: 'vergers', pathMatch: 'full' }
     ]
   },
