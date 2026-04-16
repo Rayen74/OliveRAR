@@ -1,0 +1,29 @@
+.verger-map-shell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 1px solid var(--color-earth-border);
+  background:
+    radial-gradient(circle at top left, rgba(138, 158, 58, 0.15), transparent 45%),
+    linear-gradient(180deg, rgba(250, 248, 244, 0.98), rgba(244, 246, 232, 0.9));
+}
+
+.verger-map-host {
+  height: 100%;
+  min-height: inherit;
+}
+
+.verger-map-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(250, 248, 244, 0.76);
+  color: var(--color-earth-muted);
+  text-align: center;
+  padding: 1rem;
+  pointer-events: none;
+}

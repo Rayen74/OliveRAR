@@ -1,0 +1,248 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+  <div
+    *ngIf="toast.show"
+    class="fixed top-6 right-6 z-[9999] flex items-center gap-2 rounded-xl border px-4 py-3 shadow-xl transition-all duration-300"
+    [style.background-color]="toast.type === 'success' ? '#f0fdf4' : '#fef2f2'"
+    [style.border-color]="toast.type === 'success' ? '#86efac' : '#fca5a5'"
+    [style.color]="toast.type === 'success' ? '#166534' : '#991b1b'"
+  >
+    <span class="material-symbols-outlined text-base">{{ toast.type === 'success' ? 'check_circle' : 'error' }}</span>
+    <span class="text-sm font-medium">{{ toast.message }}</span>
+  </div>
+
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8" *ngIf="usersData$ | async as data">
+    <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Gestion des utilisateurs</h1>
+        <p class="text-sm text-earth-muted">Ajoutez, modifiez et supprimez les membres de la coopérative.</p>
+      </div>
+
+      <button
+        type="button"
+        (click)="openCreateForm()"
+        class="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-olive-600 px-4 py-2.5 text-white shadow-sm transition-colors hover:bg-olive-700"
+      >
+        <span class="material-symbols-outlined text-base">person_add</span>
+        Ajouter un utilisateur
+      </button>
+    </header>
+
+    <div class="mb-6 rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+      <form [formGroup]="filterForm" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+          <label class="mb-2 block text-sm font-medium text-earth-text">Rechercher par nom</label>
+          <input
+            type="text"
+            formControlName="searchName"
+            (input)="onFilterChange()"
+            placeholder="Nom ou prénom"
+            class="w-full rounded-lg border border-earth-border px-3 py-2 outline-none focus:ring-1 focus:ring-olive-500"
+          >
+        </div>
+
+        <div>
+          <label class="mb-2 block text-sm font-medium text-earth-text">Filtrer par rôle</label>
+          <select
+            formControlName="searchRole"
+            (change)="onFilterChange()"
+            class="w-full rounded-lg border border-earth-border bg-white px-3 py-2 outline-none focus:ring-1 focus:ring-olive-500"
+          >
+            <option value="">Tous les rôles</option>
+            <option *ngFor="let role of roleFilterOptions" [value]="role">
+              {{ formatRole(role) }}
+            </option>
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <div *ngIf="error" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+      {{ error }}
+    </div>
+
+    <div class="mb-6 overflow-hidden rounded-xl border border-earth-border bg-white shadow-sm transition-all duration-300">
+      <div *ngIf="showUserForm; else addUserHint" class="border-b border-earth-border bg-earth-bg/60 px-5 py-4">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-earth-text">
+              {{ editingUserId ? 'Modifier un utilisateur' : 'Ajouter un utilisateur' }}
+            </h2>
+            <p class="text-sm text-earth-muted">
+              {{ editingUserId ? 'Mettez à jour les informations sans quitter la page.' : 'Le formulaire reste masqué tant que vous n’en avez pas besoin.' }}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            (click)="cancelEdit()"
+            class="inline-flex items-center gap-2 self-start rounded-lg border border-earth-border bg-white px-4 py-2 text-earth-text transition-colors hover:bg-gray-50"
+          >
+            <span class="material-symbols-outlined text-base">close</span>
+            Annuler
+          </button>
+        </div>
+      </div>
+
+      <ng-template #addUserHint>
+        <div class="px-5 py-4 text-sm text-earth-muted">
+          Utilisez le bouton <span class="font-medium text-earth-text">Ajouter un utilisateur</span> pour ouvrir le formulaire.
+        </div>
+      </ng-template>
+
+      <div *ngIf="showUserForm" class="px-5 py-5 transition-all duration-300 animate-[fadeIn_.25s_ease-out]">
+        <form [formGroup]="userForm" (ngSubmit)="submitUserForm()" class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <input formControlName="nom" placeholder="Nom" class="rounded-lg border border-earth-border px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+            <input formControlName="prenom" placeholder="Prénom" class="rounded-lg border border-earth-border px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <input formControlName="email" placeholder="E-mail" class="rounded-lg border border-earth-border px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+
+            <div>
+              <input
+                formControlName="phoneNumber"
+                placeholder="Téléphone (8 chiffres)"
+                maxlength="8"
+                class="w-full rounded-lg border border-earth-border px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500"
+              >
+              <p *ngIf="phoneError" class="mt-2 text-xs text-red-600">{{ phoneError }}</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:col-span-2">
+            <div class="relative">
+              <input
+                formControlName="password"
+                [placeholder]="editingUserId ? 'Nouveau mot de passe' : 'Mot de passe'"
+                type="password"
+                class="w-full rounded-lg border border-earth-border px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500"
+              >
+              <p *ngIf="editingUserId" class="mt-1 text-[10px] uppercase tracking-tight text-earth-muted">Optionnel pendant la modification</p>
+
+              <div *ngIf="userForm.get('password')?.value && passwordErrors.length > 0" class="mt-2 space-y-1">
+                <div *ngFor="let error of passwordErrors" class="flex items-center gap-2 text-xs text-red-600">
+                  <span>!</span>
+                  <span>{{ error }}</span>
+                </div>
+              </div>
+
+              <div *ngIf="userForm.get('password')?.value && isPasswordValid" class="mt-2">
+                <div class="flex items-center gap-2 text-xs text-green-600">
+                  <span>OK</span>
+                  <span>Mot de passe valide</span>
+                </div>
+              </div>
+            </div>
+
+            <select formControlName="role" class="rounded-lg border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+              <option *ngFor="let role of manageableRoles" [value]="role">{{ formatRole(role) }}</option>
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-1 sm:flex-row xl:col-span-2">
+            <button
+              type="submit"
+              [disabled]="isSubmitting"
+              class="inline-flex items-center justify-center gap-2 rounded-lg bg-olive-600 px-4 py-2.5 text-white transition-colors hover:bg-olive-700 disabled:opacity-50"
+            >
+              <span class="material-symbols-outlined text-base">{{ editingUserId ? 'save' : 'person_add' }}</span>
+              {{ editingUserId ? 'Enregistrer les modifications' : 'Créer l’utilisateur' }}
+            </button>
+
+            <button
+              type="button"
+              (click)="cancelEdit()"
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-earth-border bg-white px-4 py-2.5 text-earth-text transition-colors hover:bg-gray-50"
+            >
+              <span class="material-symbols-outlined text-base">close</span>
+              Annuler
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div *ngIf="isLoading" class="my-4 flex items-center gap-2 text-sm text-earth-muted">
+      <div class="h-4 w-4 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+      Mise à jour de la liste...
+    </div>
+
+    <div *ngIf="!isLoading" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div *ngFor="let user of data.users" class="rounded-xl border border-earth-border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <div class="mb-2 flex items-center gap-3">
+              <ng-container *ngIf="user.imageUrl; else userInitials">
+                <img [src]="user.imageUrl" alt="photo" class="h-11 w-11 rounded-full border border-olive-100 object-cover">
+              </ng-container>
+              <ng-template #userInitials>
+                <div class="flex h-11 w-11 items-center justify-center rounded-full border border-olive-100 bg-olive-100 text-sm font-semibold text-olive-700">
+                  {{ (user.prenom?.charAt(0) || '') + (user.nom?.charAt(0) || '') }}
+                </div>
+              </ng-template>
+              <div class="min-w-0">
+                <p class="truncate font-semibold text-earth-text">{{ user.nom }} {{ user.prenom }}</p>
+                <p class="truncate text-sm text-earth-muted">{{ user.email }}</p>
+              </div>
+            </div>
+            <p class="text-sm text-earth-muted">Téléphone: {{ user.phoneNumber }}</p>
+            <p class="mt-3 inline-block rounded-full border border-olive-100 bg-olive-50 px-2 py-1 text-xs text-olive-700">
+              {{ formatRole(user.role) }}
+            </p>
+          </div>
+
+          <div class="flex gap-2">
+            <button (click)="startEdit(user)" class="flex h-9 w-9 items-center justify-center rounded-lg bg-earth-bg text-earth-text transition-colors hover:bg-earth-card" title="Modifier">
+              <span class="material-symbols-outlined text-base">edit</span>
+            </button>
+            <button (click)="deleteUser(user)" class="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100" title="Supprimer">
+              <span class="material-symbols-outlined text-base">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="data.users.length === 0" class="col-span-full rounded-xl border-2 border-dashed border-earth-border py-12 text-center text-earth-muted">
+        Aucun utilisateur ne correspond à la recherche.
+      </div>
+    </div>
+
+    <div *ngIf="!isLoading && data.users.length > 0" class="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <p class="text-sm text-earth-muted">
+        Page <span class="font-medium text-earth-text">{{ currentPage + 1 }}</span> sur {{ totalPages }} - {{ totalElements }} au total
+      </p>
+      <div class="flex items-center gap-2">
+        <button (click)="previousPage()" [disabled]="currentPage === 0" class="inline-flex items-center gap-1 rounded-lg border border-earth-border bg-white px-4 py-2 transition-colors hover:bg-gray-50 disabled:opacity-50">
+          <span class="material-symbols-outlined text-base">chevron_left</span>
+          Précédent
+        </button>
+        <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1" class="inline-flex items-center gap-1 rounded-lg border border-earth-border bg-white px-4 py-2 transition-colors hover:bg-gray-50 disabled:opacity-50">
+          Suivant
+          <span class="material-symbols-outlined text-base">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <div *ngIf="isDeleteModalOpen" class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-xl border border-earth-border bg-white p-6 shadow-2xl">
+      <div class="mb-4 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+          <span class="material-symbols-outlined">warning</span>
+        </div>
+        <h3 class="text-lg font-bold">Confirmer la suppression</h3>
+      </div>
+      <p class="mb-6 text-sm leading-relaxed text-earth-muted">
+        Voulez-vous vraiment supprimer l'utilisateur
+        <span class="font-bold text-earth-text">{{ userToDelete?.nom }} {{ userToDelete?.prenom }}</span> ?
+      </p>
+      <div class="flex justify-end gap-3">
+        <button (click)="cancelDelete()" class="rounded-lg border border-earth-border px-4 py-2 transition-colors hover:bg-gray-50">Annuler</button>
+        <button (click)="confirmDelete()" class="rounded-lg bg-red-600 px-4 py-2 text-white shadow-sm transition-colors hover:bg-red-700">Supprimer définitivement</button>
+      </div>
+    </div>
+  </div>
+</div>

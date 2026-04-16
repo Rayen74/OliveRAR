@@ -1,0 +1,375 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+  <app-agriculteur-sidebar></app-agriculteur-sidebar>
+
+  <main class="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+    <header class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Mes vergers</h1>
+        <p class="text-sm text-earth-muted">Liste compacte, détails rapides et pagination performante.</p>
+      </div>
+      <button (click)="openCreate()"
+              class="inline-flex items-center justify-center gap-2 rounded-xl bg-olive-600 px-4 py-2.5 text-white shadow-sm transition-colors hover:bg-olive-700">
+        <span class="material-symbols-outlined text-base">add</span>
+        Nouveau verger
+      </button>
+    </header>
+
+    <section class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
+      <article class="rounded-2xl border border-earth-border bg-white px-4 py-4 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-earth-muted">Vergers actifs</p>
+        <p class="mt-2 text-3xl font-bold text-earth-text">{{ totalVergers }}</p>
+        <p class="mt-1 text-sm text-earth-muted">Toutes pages confondues.</p>
+      </article>
+
+      <article class="rounded-2xl border border-earth-border bg-white px-4 py-4 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-earth-muted">Surface visible</p>
+        <p class="mt-2 text-3xl font-bold text-earth-text">{{ totalSuperficie | number:'1.0-2' }} ha</p>
+        <p class="mt-1 text-sm text-earth-muted">Total calculé sur la page courante.</p>
+      </article>
+
+      <article class="rounded-2xl border border-earth-border bg-white px-4 py-4 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-earth-muted">Prêts à récolter</p>
+        <p class="mt-2 text-3xl font-bold text-harvest-600">{{ vergersPrets }}</p>
+        <p class="mt-1 text-sm text-earth-muted">{{ vergersGeolocalises }} verger(s) géolocalisé(s) sur cette page.</p>
+      </article>
+    </section>
+
+    <div *ngIf="error && !showModal"
+         class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+      {{ error }}
+    </div>
+
+    <div *ngIf="loading" class="rounded-2xl border border-earth-border bg-white px-4 py-10 text-center text-earth-muted">
+      Chargement des vergers...
+    </div>
+
+    <div *ngIf="!loading" class="space-y-6">
+      <div *ngIf="vergers.length === 0"
+           class="rounded-2xl border border-earth-border bg-white px-4 py-16 text-center text-earth-muted">
+        <span class="material-symbols-outlined text-5xl text-earth-muted">forest</span>
+        <p class="mt-2 text-lg font-medium">Aucun verger trouvé</p>
+        <p class="mt-1 text-sm">Créez votre premier verger pour lancer le suivi.</p>
+      </div>
+
+      <section *ngIf="vergers.length > 0" class="grid min-h-[calc(100vh-15rem)] grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div class="space-y-4">
+          <div class="flex flex-col gap-3 rounded-2xl border border-earth-border bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-earth-muted">
+              Affichage <span class="font-semibold text-earth-text">{{ pageSummaryStart }}</span>
+              à <span class="font-semibold text-earth-text">{{ pageSummaryEnd }}</span>
+              sur <span class="font-semibold text-earth-text">{{ totalVergers }}</span>
+            </p>
+
+            <span class="rounded-full border border-earth-border bg-earth-bg px-3 py-1 text-xs font-medium text-earth-muted">
+              5 éléments par page
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <article *ngFor="let verger of vergers; trackBy: trackByVerger"
+                     (click)="selectVerger(verger)"
+                     (keyup.enter)="selectVerger(verger)"
+                     (keyup.space)="selectVerger(verger); $event.preventDefault()"
+                     tabindex="0"
+                     role="button"
+                     class="group rounded-2xl border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-olive-200"
+                     [ngClass]="selectedVerger?.id === verger.id ? 'border-olive-300 ring-2 ring-olive-100' : 'border-earth-border'">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-xl text-olive-600">forest</span>
+                    <h2 class="truncate text-base font-semibold text-earth-text">{{ verger.nom }}</h2>
+                  </div>
+                  <p class="line-clamp-2 text-sm text-earth-muted">{{ verger.localisation || 'Localisation non renseignée' }}</p>
+                </div>
+
+                <span class="shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium"
+                      [ngClass]="getStatutClass(verger.statut)">
+                  {{ getStatutLabel(verger.statut) }}
+                </span>
+              </div>
+
+              <div class="mt-4 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 text-sm">
+                <span class="text-earth-muted">Arbres</span>
+                <span class="truncate text-right font-semibold text-earth-text">{{ verger.nombreArbres }}</span>
+
+                <span class="text-earth-muted">Surface</span>
+                <span class="truncate text-right font-semibold text-earth-text">{{ verger.superficie }} ha</span>
+
+                <span class="text-earth-muted">Rendement</span>
+                <span class="truncate text-right font-semibold text-earth-text">{{ verger.rendementEstime }} kg</span>
+
+                <span class="text-earth-muted">Coordonnées</span>
+                <span class="truncate text-right font-semibold"
+                      [ngClass]="hasValidCoordinates(verger) ? 'text-olive-700' : 'text-earth-text'">
+                  {{ hasValidCoordinates(verger) ? 'Disponibles' : 'Manquantes' }}
+                </span>
+              </div>
+
+              <div class="mt-4 flex items-center justify-between gap-2 border-t border-earth-border pt-3">
+                <span class="text-xs text-earth-muted">Cliquez pour afficher les détails</span>
+                <div class="flex gap-2">
+                  <button (click)="openEdit(verger); $event.stopPropagation()"
+                          class="inline-flex items-center justify-center rounded-lg border border-earth-border px-2.5 py-2 text-earth-text transition-colors hover:bg-earth-bg"
+                          aria-label="Modifier le verger">
+                    <span class="material-symbols-outlined text-[18px]">edit</span>
+                  </button>
+                  <button (click)="confirmDelete(verger); $event.stopPropagation()"
+                          class="inline-flex items-center justify-center rounded-lg border border-red-200 px-2.5 py-2 text-red-500 transition-colors hover:bg-red-50"
+                          aria-label="Supprimer le verger">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="flex flex-col gap-3 rounded-2xl border border-earth-border bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-2">
+              <button (click)="changePage(currentPage - 1)"
+                      [disabled]="currentPage <= 1"
+                      class="rounded-lg border border-earth-border px-3 py-2 text-sm text-earth-text transition-colors hover:bg-earth-bg disabled:cursor-not-allowed disabled:opacity-50">
+                Précédent
+              </button>
+
+              <button (click)="changePage(currentPage + 1)"
+                      [disabled]="currentPage >= totalPages"
+                      class="rounded-lg border border-earth-border px-3 py-2 text-sm text-earth-text transition-colors hover:bg-earth-bg disabled:cursor-not-allowed disabled:opacity-50">
+                Suivant
+              </button>
+            </div>
+
+            <p class="text-sm text-earth-muted">Page {{ currentPage }} sur {{ totalPages || 1 }}</p>
+          </div>
+        </div>
+
+        <aside class="overflow-hidden rounded-2xl border border-earth-border bg-white shadow-sm xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)]">
+          <div class="flex h-full min-h-0 flex-col">
+            <div class="border-b border-earth-border px-4 py-3">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-xs uppercase tracking-[0.18em] text-earth-muted">Verger sélectionné</p>
+                  <h2 class="mt-1 truncate text-lg font-semibold text-earth-text">{{ selectedVerger?.nom || 'Aucun verger sélectionné' }}</h2>
+                  <p class="mt-1 line-clamp-2 text-xs text-earth-muted">{{ selectedVerger?.localisation || 'Choisissez un verger pour afficher son détail.' }}</p>
+                </div>
+
+                <span *ngIf="selectedVerger" class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium"
+                      [ngClass]="getStatutClass(selectedVerger.statut)">
+                  {{ getStatutLabel(selectedVerger.statut) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+              <div *ngIf="detailError" class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {{ detailError }}
+              </div>
+
+              <div *ngIf="detailLoading" class="rounded-lg border border-earth-border bg-earth-bg p-3 text-sm text-earth-muted">
+                Chargement des détails...
+              </div>
+
+              <ng-container *ngIf="selectedVerger; else emptySelection">
+                <app-verger-map
+                  [markers]="hasValidCoordinates(selectedVerger) ? [{ id: selectedVerger.id || selectedVerger.nom, title: selectedVerger.nom, subtitle: selectedVerger.localisation, latitude: selectedVerger.latitude, longitude: selectedVerger.longitude }] : []"
+                  [selectedMarkerId]="selectedVerger.id || selectedVerger.nom"
+                  [interactive]="false"
+                  [mapHeight]="210"
+                  emptyMessage="Ajoutez une position pour afficher ce verger sur la carte.">
+                </app-verger-map>
+
+                <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-2xl border border-earth-border bg-earth-bg px-3 py-3 text-[13px]">
+                  <span class="text-earth-muted">Type d'olive</span>
+                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.typeOlive || 'N/A' }}</span>
+
+                  <span class="text-earth-muted">Arbres</span>
+                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.nombreArbres }}</span>
+
+                  <span class="text-earth-muted">Surface</span>
+                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.superficie }} ha</span>
+
+                  <span class="text-earth-muted">Rendement estimé</span>
+                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.rendementEstime }} kg</span>
+
+                  <span class="text-earth-muted">Latitude</span>
+                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.latitude || 'N/A' }}</span>
+
+                  <span class="text-earth-muted">Longitude</span>
+                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.longitude || 'N/A' }}</span>
+                </div>
+
+                <div class="flex gap-2">
+                  <button (click)="openEdit(selectedVerger)"
+                          class="flex-1 rounded-xl border border-earth-border px-3 py-2 text-sm font-medium text-earth-text transition-colors hover:bg-earth-bg">
+                    Modifier
+                  </button>
+                  <button (click)="confirmDelete(selectedVerger)"
+                          class="flex-1 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-50">
+                    Supprimer
+                  </button>
+                </div>
+              </ng-container>
+
+              <ng-template #emptySelection>
+                <div class="rounded-2xl border border-dashed border-earth-border px-4 py-10 text-center text-sm text-earth-muted">
+                  Sélectionnez un verger pour afficher ses informations.
+                </div>
+              </ng-template>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div *ngIf="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div class="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
+    <h2 class="mb-4 text-xl font-semibold text-earth-text">
+      {{ isEditing ? 'Modifier le verger' : 'Nouveau verger' }}
+    </h2>
+
+    <div *ngIf="error"
+         class="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-600">{{ error }}</div>
+
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+      <section class="space-y-4">
+        <div class="rounded-3xl border border-earth-border bg-earth-bg p-4">
+          <div class="mb-3 flex items-start justify-between gap-4">
+            <div>
+              <p class="text-xs uppercase tracking-[0.18em] text-earth-muted">Position du verger</p>
+              <h3 class="mt-2 text-lg font-semibold text-earth-text">Choisissez l'emplacement sur la carte</h3>
+            </div>
+            <span class="inline-flex items-center gap-1 rounded-full border border-earth-border bg-white px-3 py-1 text-xs text-earth-muted">
+              <span class="material-symbols-outlined text-sm">touch_app</span>
+              Clic pour placer le point
+            </span>
+          </div>
+
+          <app-verger-map
+            [interactive]="true"
+            [selectedPosition]="hasValidCoordinates(currentVerger) ? { latitude: currentVerger.latitude, longitude: currentVerger.longitude } : null"
+            [mapHeight]="380"
+            emptyMessage="Cliquez sur la carte pour définir l'emplacement du verger."
+            (positionSelected)="onMapPositionSelected($event)">
+          </app-verger-map>
+
+          <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div class="rounded-2xl border border-earth-border bg-white p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-earth-muted">Latitude</p>
+              <p class="mt-2 text-lg font-semibold text-earth-text">{{ currentVerger.latitude || 'Non définie' }}</p>
+            </div>
+            <div class="rounded-2xl border border-earth-border bg-white p-4">
+              <p class="text-xs uppercase tracking-[0.16em] text-earth-muted">Longitude</p>
+              <p class="mt-2 text-lg font-semibold text-earth-text">{{ currentVerger.longitude || 'Non définie' }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-earth-text">Nom du verger *</label>
+            <input [(ngModel)]="currentVerger.nom" placeholder="Ex: Verger Nord"
+                   class="w-full rounded-xl border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-earth-text">Adresse ou repère *</label>
+            <textarea [(ngModel)]="currentVerger.localisation" rows="3" placeholder="Une adresse sera proposée automatiquement après sélection sur la carte."
+                      class="w-full resize-none rounded-xl border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500"></textarea>
+            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span *ngIf="isResolvingAddress"
+                    class="inline-flex items-center gap-1 rounded-full bg-olive-50 px-3 py-1 text-olive-700">
+                <span class="material-symbols-outlined animate-pulse text-sm">travel_explore</span>
+                Recherche d'adresse...
+              </span>
+              <span *ngIf="!isResolvingAddress && resolvedAddress"
+                    class="inline-flex items-center gap-1 rounded-full border border-earth-border bg-earth-bg px-3 py-1 text-earth-muted">
+                <span class="material-symbols-outlined text-sm">distance</span>
+                Adresse détectée
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm font-medium text-earth-text">Superficie (ha)</label>
+            <input [(ngModel)]="currentVerger.superficie" type="number" min="0"
+                   class="w-full rounded-xl border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm font-medium text-earth-text">Nombre d'arbres</label>
+            <input [(ngModel)]="currentVerger.nombreArbres" type="number" min="0"
+                   class="w-full rounded-xl border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm font-medium text-earth-text">Type d'olive</label>
+            <select [(ngModel)]="currentVerger.typeOlive"
+                    class="w-full rounded-xl border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+              <option value="Chemlali">Chemlali</option>
+              <option value="Zalmati">Zalmati</option>
+              <option value="Oueslati">Oueslati</option>
+              <option value="Gerboui">Gerboui</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm font-medium text-earth-text">Rendement estimé (kg)</label>
+            <input [(ngModel)]="currentVerger.rendementEstime" type="number" min="0"
+                   class="w-full rounded-xl border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-earth-text">Statut</label>
+            <select [(ngModel)]="currentVerger.statut"
+                    class="w-full rounded-xl border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+              <option value="EN_CROISSANCE">En croissance</option>
+              <option value="PRET_POUR_RECOLTE">Prêt pour récolte (notifie les responsables)</option>
+              <option value="TERMINE">Terminé</option>
+            </select>
+            <p *ngIf="currentVerger.statut === 'PRET_POUR_RECOLTE'"
+               class="mt-2 rounded-2xl border border-olive-200 bg-olive-50 px-4 py-3 text-xs text-olive-700">
+              Une notification sera envoyée au responsable logistique et à la coopérative.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="mt-6 flex gap-3">
+      <button (click)="save()" [disabled]="isSaving"
+              class="flex-1 rounded-xl bg-olive-600 px-4 py-2.5 text-white transition-colors hover:bg-olive-700 disabled:opacity-50">
+        {{ isSaving ? 'Sauvegarde...' : (isEditing ? 'Modifier' : 'Créer') }}
+      </button>
+      <button (click)="closeModal()"
+              class="flex-1 rounded-xl border border-earth-border px-4 py-2.5 text-earth-text transition-colors hover:bg-earth-bg">
+        Annuler
+      </button>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+    <span class="material-symbols-outlined text-5xl text-red-400">warning</span>
+    <h2 class="mt-3 text-xl font-semibold text-earth-text">Supprimer le verger ?</h2>
+    <p class="mt-2 text-sm text-earth-muted">
+      Voulez-vous vraiment supprimer
+      <strong>{{ vergerToDelete?.nom }}</strong> ?
+      Cette action est irréversible.
+    </p>
+    <div class="mt-6 flex gap-3">
+      <button (click)="deleteVerger()"
+              class="flex-1 rounded-xl bg-red-500 px-4 py-2.5 text-white transition-colors hover:bg-red-600">
+        Supprimer
+      </button>
+      <button (click)="showDeleteModal = false"
+              class="flex-1 rounded-xl border border-earth-border px-4 py-2.5 text-earth-text transition-colors hover:bg-earth-bg">
+        Annuler
+      </button>
+    </div>
+  </div>
+</div>
