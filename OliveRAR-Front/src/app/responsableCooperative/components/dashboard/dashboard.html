@@ -76,8 +76,7 @@
             </div>
 
             <!-- Dropdown -->
-            <select *ngIf="!loadingVergers && vergers.length > 0"
-              [ngModel]="selectedVerger?.id || ''"
+            <select *ngIf="!loadingVergers && vergers.length > 0" [ngModel]="selectedVerger?.id || ''"
               (change)="onVergerChange($event)"
               class="w-full rounded-2xl border border-earth-border bg-earth-bg px-4 py-3.5 text-sm font-medium text-earth-text outline-none focus:border-olive-500 transition-all appearance-none cursor-pointer">
               <option value="" disabled selected hidden>Sélectionner un verger</option>

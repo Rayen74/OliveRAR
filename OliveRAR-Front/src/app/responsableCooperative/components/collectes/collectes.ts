@@ -121,17 +121,17 @@ export class CollectesComponent implements OnInit {
   private loadDropdowns(): void {
     this.collecteApi.getReadyVergers().subscribe({
       next: (v) => (this.readyVergers = v),
-      error: () => {},
+      error: () => { },
     });
 
     this.collecteApi.getUsersByRole('RESPONSABLE_CHEF_RECOLTE').subscribe({
       next: (res) => (this.chefsRecolte = res.users ?? []),
-      error: () => {},
+      error: () => { },
     });
 
     this.collecteApi.getUsersByRole('RESPONSABLE_LOGISTIQUE').subscribe({
       next: (res) => (this.responsablesAffectation = res.users ?? []),
-      error: () => {},
+      error: () => { },
     });
   }
 

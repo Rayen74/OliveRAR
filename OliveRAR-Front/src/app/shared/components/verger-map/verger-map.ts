@@ -55,7 +55,7 @@ export class VergerMapComponent implements AfterViewInit, OnChanges, OnDestroy {
 
   protected hasVisibleData = false;
 
-  constructor(@Inject(PLATFORM_ID) private readonly platformId: object) {}
+  constructor(@Inject(PLATFORM_ID) private readonly platformId: object) { }
 
   async ngAfterViewInit(): Promise<void> {
     if (!isPlatformBrowser(this.platformId) || !this.mapHost) {
@@ -154,9 +154,9 @@ export class VergerMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     const useCluster = markers.length >= 12 && typeof (this.leaflet as any).markerClusterGroup === 'function';
     const layerGroup = useCluster
       ? (this.leaflet as any).markerClusterGroup({
-          showCoverageOnHover: false,
-          spiderfyOnMaxZoom: true
-        })
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true
+      })
       : this.leaflet.layerGroup();
 
     markers.forEach((marker) => {

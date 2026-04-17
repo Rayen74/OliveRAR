@@ -53,14 +53,25 @@ export class AuthService {
   private readonly userStorageKey = 'user';
   private readonly currentUserSubject = new BehaviorSubject<User | null>(null);
   readonly currentUser$ = this.currentUserSubject.asObservable();
+  // Signal pour indiquer quand la session (token/user) est restauree depuis le localStorage.
+  // Utile pour eviter que les composants ne chargent des donnees avant d'etre authentifies.
+  private readonly sessionReadySubject = new BehaviorSubject<boolean>(false);
+  readonly sessionReady$ = this.sessionReadySubject.asObservable();
 
   constructor(
     private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
+    // Dans Angular SSR, le code s'execute deux fois : une sur le serveur, une sur le navigateur.
+    // localStorage n'existe QUE sur le navigateur. On verifie donc isPlatformBrowser.
     if (isPlatformBrowser(this.platformId)) {
       const user = localStorage.getItem(this.userStorageKey);
-      this.currentUserSubject.next(user ? JSON.parse(user) as User : null);
+      if (user) {
+        // Restauration du sujet de l'utilisateur connecte depuis la memoire du navigateur
+        this.currentUserSubject.next(JSON.parse(user) as User);
+      }
+      // On informe le reste de l'application que la session (et le token) sont prets a l'emploi
+      this.sessionReadySubject.next(true);
     }
   }
 
