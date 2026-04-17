@@ -1,0 +1,153 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8">
+    <header class="mb-8 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Tableau de bord</h1>
+        <p class="text-sm text-earth-muted">Vue d'ensemble de la campagne oléicole 2026.</p>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+        <p class="text-sm font-medium uppercase text-earth-muted">Vergers suivis</p>
+        <p class="mt-2 text-3xl font-bold text-harvest-600">{{ totalVergers }}</p>
+        <div class="mt-3 text-xs text-earth-muted">Chargés une seule fois depuis le backend.</div>
+      </div>
+
+      <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+        <p class="text-sm font-medium uppercase text-earth-muted">Alertes maturité</p>
+        <p class="mt-2 text-3xl font-bold text-alert-500">{{ readyVergers }}</p>
+        <p class="mt-2 text-xs italic text-earth-muted">Vergers actuellement prêts pour récolte.</p>
+      </div>
+
+      <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+        <p class="text-sm font-medium uppercase text-earth-muted">Rendement moyen estimé</p>
+        <p class="mt-2 text-3xl font-bold text-olive-700">{{ averageYield | number:'1.0-1' }} kg</p>
+        <p class="mt-2 text-xs text-olive-500">Basé sur les données des vergers chargés.</p>
+      </div>
+
+      <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+        <p class="text-sm font-medium uppercase text-earth-muted">Vergers géolocalisés</p>
+        <p class="mt-2 text-3xl font-bold text-earth-text">{{ locatedVergers }}</p>
+        <p class="mt-2 text-xs text-earth-muted">Les coordonnées invalides sont ignorées automatiquement.</p>
+      </div>
+    </div>
+
+    <section class="mt-10 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
+      <div class="rounded-3xl border border-earth-border bg-white p-5 shadow-sm">
+        <div class="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-earth-text">Carte des vergers</h2>
+            <p class="text-sm text-earth-muted">Cliquez sur un marqueur pour afficher les détails du verger sans
+              recharger la page.</p>
+          </div>
+        </div>
+
+        <div *ngIf="mapError" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {{ mapError }}
+        </div>
+
+        <div *ngIf="loadingVergers" class="flex h-[430px] items-center justify-center text-earth-muted">
+          Chargement de la carte...
+        </div>
+
+        <app-verger-map *ngIf="!loadingVergers" [markers]="mapMarkers" [interactive]="false"
+          [selectedMarkerId]="selectedVerger?.id || selectedVerger?.nom || null" [mapHeight]="430"
+          emptyMessage="Aucun verger avec coordonnées valides n'est disponible."
+          (markerSelected)="onMarkerSelected($event)">
+        </app-verger-map>
+      </div>
+
+      <aside class="h-fit rounded-3xl border border-earth-border bg-white p-5 shadow-sm">
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs uppercase tracking-[0.18em] text-earth-muted">Sélection du verger</p>
+            <h2 class="mt-2 text-xl font-semibold text-earth-text">Choisir un verger</h2>
+            <p class="mt-1 text-sm text-earth-muted">Sélectionnez un verger dans la liste pour voir ses données.</p>
+          </div>
+
+          <div class="relative">
+            <!-- Spinner -->
+            <div *ngIf="loadingVergers" class="flex items-center gap-2 py-2 px-1 text-sm text-olive-600">
+              <span class="h-4 w-4 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></span>
+              Chargement des vergers...
+            </div>
+
+            <!-- Dropdown -->
+            <select *ngIf="!loadingVergers && vergers.length > 0"
+              [ngModel]="selectedVerger?.id || ''"
+              (change)="onVergerChange($event)"
+              class="w-full rounded-2xl border border-earth-border bg-earth-bg px-4 py-3.5 text-sm font-medium text-earth-text outline-none focus:border-olive-500 transition-all appearance-none cursor-pointer">
+              <option value="" disabled selected hidden>Sélectionner un verger</option>
+              <option *ngFor="let v of vergers" [value]="v.id">
+                {{ v.nom }} {{ v.localisation ? '· ' + v.localisation : '' }}
+              </option>
+            </select>
+
+            <!-- Arrow icon for select -->
+            <span *ngIf="!loadingVergers && vergers.length > 0"
+              class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-earth-muted">
+              unfold_more
+            </span>
+
+            <!-- Empty info -->
+            <div *ngIf="!loadingVergers && vergers.length === 0"
+              class="flex items-center gap-2 rounded-2xl border border-dashed border-earth-border bg-earth-bg/50 px-4 py-4 text-sm text-earth-muted italic">
+              <span class="material-symbols-outlined text-base">info</span>
+              Aucun verger disponible
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-earth-border bg-earth-bg/70 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-xs uppercase tracking-[0.18em] text-earth-muted">Verger sélectionné</p>
+                <h3 class="mt-1 truncate text-lg font-semibold text-earth-text">
+                  {{ selectedVerger?.nom || 'Aucun verger sélectionné' }}
+                </h3>
+              </div>
+              <span *ngIf="selectedVerger" class="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                [ngClass]="selectedVerger.statut === 'PRET_POUR_RECOLTE' ? 'bg-olive-50 text-olive-700' : 'border border-earth-border bg-white text-earth-muted'">
+                {{ selectedVerger.statut || 'N/A' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="selectedVerger; else emptySelection" class="mt-4 space-y-3">
+          <div
+            class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-2xl border border-earth-border bg-earth-bg px-4 py-3 text-sm">
+            <span class="text-earth-muted">Localisation</span>
+            <span class="text-right font-medium text-earth-text">{{ selectedVerger.localisation || 'Non renseignée'
+              }}</span>
+
+            <span class="text-earth-muted">Arbres</span>
+            <span class="text-right font-semibold text-earth-text">{{ selectedVerger.nombreArbres }}</span>
+
+            <span class="text-earth-muted">Superficie</span>
+            <span class="text-right font-semibold text-earth-text">{{ selectedVerger.superficie }} ha</span>
+
+            <span class="text-earth-muted">Type d'olive</span>
+            <span class="text-right font-semibold text-earth-text">{{ selectedVerger.typeOlive || 'N/A' }}</span>
+
+            <span class="text-earth-muted">Rendement</span>
+            <span class="text-right font-semibold text-earth-text">{{ selectedVerger.rendementEstime }} kg</span>
+
+            <span class="text-earth-muted">Coordonnées</span>
+            <span class="text-right font-medium text-earth-text">{{ selectedVerger.latitude }} / {{
+              selectedVerger.longitude }}</span>
+          </div>
+        </div>
+
+        <ng-template #emptySelection>
+          <div
+            class="mt-4 rounded-2xl border border-dashed border-earth-border px-4 py-10 text-center text-earth-muted">
+            Sélectionnez un verger dans la liste ci-dessus ou sur la carte.
+          </div>
+        </ng-template>
+      </aside>
+    </section>
+  </main>
+</div>

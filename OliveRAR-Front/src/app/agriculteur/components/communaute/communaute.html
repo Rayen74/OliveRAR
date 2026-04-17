@@ -1,0 +1,158 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+  <app-agriculteur-sidebar></app-agriculteur-sidebar>
+
+  <main class="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold text-earth-text">Communauté</h1>
+      <p class="text-sm text-earth-muted">Échangez avec les autres agriculteurs et la coopérative.</p>
+    </header>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_350px]">
+      <div class="space-y-6">
+
+        <section class="rounded-2xl border border-earth-border bg-white p-5 shadow-sm">
+          <div class="mb-4 flex items-center gap-2 text-olive-600">
+            <span class="material-symbols-outlined">edit_note</span>
+            <h2 class="font-semibold text-earth-text">Créer une publication</h2>
+          </div>
+          <div class="space-y-3">
+            <input [(ngModel)]="nouveauPost.titre"
+                   placeholder="Titre de votre message"
+                   class="w-full rounded-xl border border-earth-border bg-earth-bg px-4 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+
+            <textarea [(ngModel)]="nouveauPost.contenu"
+                      placeholder="Que souhaitez-vous partager ?"
+                      rows="3"
+                      class="w-full resize-none rounded-xl border border-earth-border bg-earth-bg px-4 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500"></textarea>
+
+            <div *ngIf="imageSelectionnee" class="relative mt-2 inline-block">
+              <img [src]="imageSelectionnee" class="h-32 w-32 rounded-lg object-cover border border-earth-border shadow-sm">
+              <button (click)="annulerImage()"
+                      class="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600">
+                <span class="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-earth-border pt-3">
+              <label class="flex cursor-pointer items-center gap-2 text-earth-muted hover:text-olive-600 transition-colors">
+                <span class="material-symbols-outlined">image</span>
+                <span class="text-xs font-medium">Ajouter une photo</span>
+                <input type="file" (change)="onFileSelected($event)" accept="image/*" class="hidden">
+              </label>
+
+              <button (click)="publier()"
+                      [disabled]="!nouveauPost.titre || !nouveauPost.contenu"
+                      class="inline-flex items-center gap-2 rounded-xl bg-olive-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-olive-700 disabled:opacity-50">
+                <span class="material-symbols-outlined text-sm">send</span>
+                Publier
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div class="space-y-4">
+          <article *ngFor="let post of posts" class="rounded-2xl border border-earth-border bg-white p-5 shadow-sm">
+
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 overflow-hidden items-center justify-center rounded-full bg-olive-100 font-bold text-olive-700 border border-earth-border">
+                  <img *ngIf="post.agriculteurPhoto" [src]="post.agriculteurPhoto" class="h-full w-full object-cover">
+                  <span *ngIf="!post.agriculteurPhoto">{{ post.agriculteurNom.charAt(0) }}</span>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-earth-text">{{ post.agriculteurNom }}</h3>
+                  <p class="text-xs text-earth-muted">{{ post.dateCreation | date:'dd/MM/yyyy HH:mm' }}</p>
+                </div>
+              </div>
+
+              <button *ngIf="post.agriculteurId === userIdConnecte"
+                      (click)="supprimer(post.id, post.agriculteurId)"
+                      class="text-earth-muted hover:text-red-500 transition-colors">
+                <span class="material-symbols-outlined text-lg">delete</span>
+              </button>
+            </div>
+
+            <div class="mt-4">
+              <h4 class="text-lg font-bold text-earth-text">{{ post.titre }}</h4>
+              <p class="mt-2 text-sm leading-relaxed text-earth-text">{{ post.contenu }}</p>
+
+              <div *ngIf="post.imagePost" class="mt-4 flex justify-center">
+                <div class="overflow-hidden rounded-xl border border-earth-border shadow-sm max-w-[500px]">
+                  <img [src]="post.imagePost"
+                       class="max-h-[500px] w-full object-contain bg-black/5"
+                       alt="Image de la publication">
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 flex items-center gap-6 border-t border-earth-border pt-4">
+              <button (click)="liker(post.id)"
+                      class="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
+                      [ngClass]="post.likes > 0 ? 'text-red-500' : 'text-earth-muted'">
+                <span class="material-symbols-outlined text-xl"
+                      [style.font-variation-settings]="post.likes > 0 ? '\'FILL\' 1' : '\'FILL\' 0'">
+                  favorite
+                </span>
+                {{ post.likes }} J'aime
+              </button>
+              <div class="flex items-center gap-2 text-sm font-medium text-earth-muted">
+                <span class="material-symbols-outlined text-xl">chat_bubble</span>
+                {{ post.commentaires.length || 0 }} Commentaires
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-3 rounded-xl bg-earth-bg p-4">
+              <div *ngFor="let c of post.commentaires" class="flex items-start gap-3 border-b border-earth-border/50 pb-3 last:border-0">
+                <div class="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-olive-100 flex items-center justify-center border border-earth-border">
+                  <img *ngIf="c.agriculteurPhoto" [src]="c.agriculteurPhoto" class="h-full w-full object-cover">
+                  <span *ngIf="!c.agriculteurPhoto" class="text-[10px] font-bold text-olive-700">{{ c.agriculteurNom?.charAt(0) }}</span>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between mb-1">
+                    <p class="text-xs font-bold text-olive-800">{{ c.agriculteurNom }}</p>
+                    <p class="text-[10px] text-earth-muted italic">{{ c.dateCreation | date:'dd/MM/yyyy HH:mm' }}</p>
+                  </div>
+                  <p class="text-sm text-earth-text">{{ c.contenu }}</p>
+                </div>
+              </div>
+
+              <div class="mt-2 flex gap-2">
+                <input [(ngModel)]="nouveauCommentaire[post.id]"
+                       placeholder="Écrire un commentaire..."
+                       (keyup.enter)="commenter(post.id)"
+                       class="flex-1 rounded-lg border border-earth-border bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-olive-500">
+                <button (click)="commenter(post.id)"
+                        class="rounded-lg bg-olive-600 px-3 text-white transition-colors hover:bg-olive-700">
+                  <span class="material-symbols-outlined text-sm">send</span>
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <aside class="hidden lg:block">
+        <div class="sticky top-8 space-y-4">
+          <div class="rounded-2xl border border-earth-border bg-white p-5 shadow-sm">
+            <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-earth-muted">Statistiques</h2>
+            <div class="mt-4 space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-earth-muted">Total Publications</span>
+                <span class="font-bold text-earth-text">{{ posts.length }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-earth-muted">Membres actifs</span>
+                <span class="font-bold text-olive-600">En ligne</span>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-2xl border border-earth-border bg-olive-50 p-5 shadow-sm">
+            <p class="text-sm font-medium text-olive-800 italic">
+              "L'échange de savoir entre agriculteurs est la clé d'une récolte d'excellence à Sfax."
+            </p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>

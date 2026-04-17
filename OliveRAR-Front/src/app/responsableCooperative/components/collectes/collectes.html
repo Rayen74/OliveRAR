@@ -1,0 +1,294 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+
+  <!-- Toast -->
+  <div
+    *ngIf="toast.show"
+    class="fixed top-6 right-6 z-[9999] flex items-center gap-2 rounded-xl border px-4 py-3 shadow-xl transition-all duration-300"
+    [style.background-color]="toast.type === 'success' ? '#f0fdf4' : '#fef2f2'"
+    [style.border-color]="toast.type === 'success' ? '#86efac' : '#fca5a5'"
+    [style.color]="toast.type === 'success' ? '#166534' : '#991b1b'"
+  >
+    <span class="material-symbols-outlined text-base">{{ toast.type === 'success' ? 'check_circle' : 'error' }}</span>
+    <span class="text-sm font-medium">{{ toast.message }}</span>
+  </div>
+
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8" *ngIf="collectesData$ | async as data">
+
+    <!-- Header -->
+    <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Gestion des collectes</h1>
+        <p class="text-sm text-earth-muted">Planifiez et gérez les campagnes de récolte.</p>
+      </div>
+      <div class="flex gap-2">
+        <a
+          routerLink="/responsable/collectes/calendrier"
+          class="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-earth-border bg-white px-4 py-2.5 text-earth-text shadow-sm transition-colors hover:bg-earth-bg"
+        >
+          <span class="material-symbols-outlined text-base">calendar_month</span>
+          Calendrier
+        </a>
+        <button
+          type="button"
+          (click)="openCreateForm()"
+          class="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-olive-600 px-4 py-2.5 text-white shadow-sm transition-colors hover:bg-olive-700"
+        >
+          <span class="material-symbols-outlined text-base">add</span>
+          Nouvelle collecte
+        </button>
+      </div>
+    </header>
+
+    <!-- Filters Bar -->
+    <div class="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-earth-border bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-2 text-sm font-medium text-earth-text">
+        <span class="material-symbols-outlined text-earth-muted">filter_list</span> Filtrer par :
+      </div>
+      
+      <select
+        [(ngModel)]="filterChefId"
+        (change)="onFilterChange()"
+        class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500"
+      >
+        <option value="">Tous les chefs de récolte</option>
+        <option *ngFor="let c of chefsRecolte" [value]="c.id">{{ userLabel(c) }}</option>
+      </select>
+
+      <select
+        [(ngModel)]="filterStatut"
+        (change)="onFilterChange()"
+        class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500"
+      >
+        <option value="">Tous les statuts</option>
+        <option *ngFor="let s of statuts" [value]="s">{{ formatStatut(s) }}</option>
+      </select>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="error" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+      {{ error }}
+    </div>
+
+    <!-- Inline form panel -->
+    <div class="mb-6 overflow-hidden rounded-xl border border-earth-border bg-white shadow-sm">
+      <div *ngIf="showForm; else formHint" class="border-b border-earth-border bg-earth-bg/60 px-5 py-4">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-earth-text">
+              {{ editingId ? 'Modifier la collecte' : 'Nouvelle collecte' }}
+            </h2>
+            <p class="text-sm text-earth-muted">Remplissez les champs requis puis sauvegardez.</p>
+          </div>
+          <button
+            type="button"
+            (click)="cancelForm()"
+            class="inline-flex items-center gap-2 rounded-lg border border-earth-border bg-white px-4 py-2 text-earth-text transition-colors hover:bg-gray-50"
+          >
+            <span class="material-symbols-outlined text-base">close</span>Annuler
+          </button>
+        </div>
+      </div>
+
+      <ng-template #formHint>
+        <div class="px-5 py-4 text-sm text-earth-muted">
+          Utilisez le bouton <span class="font-medium text-earth-text">Nouvelle collecte</span> pour ouvrir le formulaire.
+        </div>
+      </ng-template>
+
+      <div *ngIf="showForm" class="px-5 py-5">
+        <form [formGroup]="collecteForm" (ngSubmit)="submitForm()" class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+
+          <!-- Verger -->
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-earth-text">Verger <span class="text-red-500">*</span></label>
+            <select formControlName="vergerId" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+              <option value="">— Sélectionner un verger PRET_POUR_RECOLTE —</option>
+              <option *ngFor="let v of readyVergers" [value]="v.id">{{ v.nom }} · {{ v.localisation }}</option>
+            </select>
+          </div>
+
+          <!-- Date prévue -->
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-earth-text">Date prévue <span class="text-red-500">*</span></label>
+            <input
+              type="date"
+              formControlName="datePrevue"
+              [min]="todayDate"
+              class="w-full rounded-lg border border-earth-border px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500"
+              [class.border-red-500]="collecteForm.get('datePrevue')?.touched && collecteForm.get('datePrevue')?.hasError('pastDate')"
+            >
+            <div *ngIf="collecteForm.get('datePrevue')?.touched && collecteForm.get('datePrevue')?.hasError('pastDate')" class="mt-1 flex items-center gap-1 text-[11px] text-red-500">
+              <span class="material-symbols-outlined text-[14px]">error</span> La date doit être ultérieure ou égale à la date du jour.
+            </div>
+          </div>
+
+          <!-- Chef récolte -->
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-earth-text">Chef de récolte <span class="text-red-500">*</span></label>
+            <select formControlName="chefRecolteId" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+              <option value="">— Sélectionner —</option>
+              <option *ngFor="let u of chefsRecolte" [value]="u.id">{{ userLabel(u) }}</option>
+            </select>
+          </div>
+
+          <!-- Responsable affectation -->
+          <div>
+            <label class="mb-1.5 block text-sm font-medium text-earth-text">Responsable d'affectation</label>
+            <select formControlName="responsableAffectationId" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+              <option value="">— Aucun —</option>
+              <option *ngFor="let u of responsablesAffectation" [value]="u.id">{{ userLabel(u) }}</option>
+            </select>
+          </div>
+
+
+          <!-- Actions -->
+          <div class="flex flex-col gap-2 pt-1 sm:flex-row xl:col-span-2">
+            <button
+              type="submit"
+              [disabled]="isSubmitting"
+              class="inline-flex items-center justify-center gap-2 rounded-lg bg-olive-600 px-4 py-2.5 text-sm text-white transition-colors hover:bg-olive-700 disabled:opacity-50"
+            >
+              <span class="material-symbols-outlined text-base">{{ editingId ? 'save' : 'add' }}</span>
+              {{ editingId ? 'Enregistrer' : 'Créer la collecte' }}
+            </button>
+            <button
+              type="button"
+              (click)="cancelForm()"
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-earth-border bg-white px-4 py-2.5 text-sm text-earth-text transition-colors hover:bg-gray-50"
+            >
+              <span class="material-symbols-outlined text-base">close</span>Annuler
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Loading spinner -->
+    <div *ngIf="isLoading" class="my-4 flex items-center gap-2 text-sm text-earth-muted">
+      <div class="h-4 w-4 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+      Chargement des collectes...
+    </div>
+
+    <!-- Collecte cards -->
+    <div *ngIf="!isLoading" class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div
+        *ngFor="let c of data.items"
+        class="rounded-xl border border-earth-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+      >
+        <!-- Card header -->
+        <div class="mb-3 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="truncate font-semibold text-earth-text">{{ c.vergerNom || c.vergerId }}</p>
+            <p class="mt-0.5 text-xs text-earth-muted">
+              <span class="material-symbols-outlined align-middle text-[14px]">calendar_today</span>
+              {{ c.datePrevue }}
+            </p>
+          </div>
+          <span class="flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold" [ngClass]="statutClass(c.statut)">
+            {{ formatStatut(c.statut) }}
+          </span>
+        </div>
+
+        <!-- Details grid -->
+        <div class="space-y-1.5 text-sm">
+          <div class="flex items-center gap-2 text-earth-muted">
+            <span class="material-symbols-outlined text-[16px]">person</span>
+            <span class="font-medium text-earth-text">Chef :</span>
+            {{ c.chefRecolteNom || '—' }}
+          </div>
+          <div *ngIf="c.responsableAffectationNom" class="flex items-center gap-2 text-earth-muted">
+            <span class="material-symbols-outlined text-[16px]">manage_accounts</span>
+            <span class="font-medium text-earth-text">Responsable :</span>
+            {{ c.responsableAffectationNom }}
+          </div>
+          <div class="flex items-center gap-2 text-earth-muted">
+            <span class="material-symbols-outlined text-[16px]">group</span>
+            <span class="font-medium text-earth-text">Équipe :</span>
+            <span *ngIf="c.equipe && c.equipe.length > 0">
+              {{ c.equipe.length }} ouvrier(s)
+              <span class="text-xs text-earth-muted">
+                ({{ c.equipe.slice(0, 2).map(m => m.nom).join(', ') }}{{ c.equipe.length > 2 ? '…' : '' }})
+              </span>
+            </span>
+            <span *ngIf="!c.equipe || c.equipe.length === 0" class="italic">Pas d'équipe</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-4 flex gap-2">
+          <button
+            (click)="startEdit(c)"
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-earth-bg text-earth-text transition-colors hover:bg-earth-card"
+            title="Modifier"
+          >
+            <span class="material-symbols-outlined text-base">edit</span>
+          </button>
+          <button
+            (click)="openDelete(c)"
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100"
+            title="Supprimer"
+          >
+            <span class="material-symbols-outlined text-base">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div
+        *ngIf="data.items.length === 0 && !isLoading"
+        class="col-span-full rounded-xl border-2 border-dashed border-earth-border py-14 text-center text-earth-muted"
+      >
+        <span class="material-symbols-outlined mb-2 block text-4xl text-earth-border">event_busy</span>
+        Aucune collecte pour le moment.
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="!isLoading && data.items.length > 0" class="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <p class="text-sm text-earth-muted">
+        Page <span class="font-medium text-earth-text">{{ currentPage + 1 }}</span> sur {{ totalPages }} — {{ totalItems }} au total
+      </p>
+      <div class="flex items-center gap-2">
+        <button
+          (click)="previousPage()"
+          [disabled]="currentPage === 0"
+          class="inline-flex items-center gap-1 rounded-lg border border-earth-border bg-white px-4 py-2 text-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+        >
+          <span class="material-symbols-outlined text-base">chevron_left</span>Précédent
+        </button>
+        <button
+          (click)="nextPage()"
+          [disabled]="currentPage >= totalPages - 1"
+          class="inline-flex items-center gap-1 rounded-lg border border-earth-border bg-white px-4 py-2 text-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
+        >
+          Suivant<span class="material-symbols-outlined text-base">chevron_right</span>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Delete modal -->
+  <div *ngIf="isDeleteModalOpen" class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-xl border border-earth-border bg-white p-6 shadow-2xl">
+      <div class="mb-4 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+          <span class="material-symbols-outlined">warning</span>
+        </div>
+        <h3 class="text-lg font-bold">Confirmer la suppression</h3>
+      </div>
+      <p class="mb-6 text-sm leading-relaxed text-earth-muted">
+        Voulez-vous vraiment supprimer la collecte du verger
+        <span class="font-bold text-earth-text">{{ deleteTarget?.vergerNom || deleteTarget?.vergerId }}</span>
+        prévue le <span class="font-bold text-earth-text">{{ deleteTarget?.datePrevue }}</span> ?
+      </p>
+      <div class="flex justify-end gap-3">
+        <button (click)="cancelDelete()" class="rounded-lg border border-earth-border px-4 py-2 text-sm transition-colors hover:bg-gray-50">Annuler</button>
+        <button (click)="confirmDelete()" class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow-sm transition-colors hover:bg-red-700">Supprimer définitivement</button>
+      </div>
+    </div>
+  </div>
+
+</div>

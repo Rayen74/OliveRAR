@@ -1,0 +1,65 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+@import "leaflet.markercluster/dist/MarkerCluster.css";
+@import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+@theme {
+  /* Olive — couleur principale */
+  --color-olive-50:  #f4f6e8;
+  --color-olive-200: #dde4b0;
+  --color-olive-500: #8a9e3a;
+  --color-olive-700: #5f6e27;
+  --color-olive-900: #3a4418;
+
+  /* Harvest — maturité & KPI */
+  --color-harvest-50:  #fef9ec;
+  --color-harvest-200: #fde9a2;
+  --color-harvest-400: #f5b731;
+  --color-harvest-600: #c47c18;
+  --color-harvest-800: #7c4c0a;
+
+  /* Terre — fonds & surfaces */
+  --color-earth-bg:     #faf8f4;
+  --color-earth-card:   #f0ece3;
+  --color-earth-border: #d6ceb8;
+  --color-earth-muted:  #8c7d62;
+  --color-earth-text:   #3d3225;
+
+  /* Alertes */
+  --color-alert-500: #ef4444;
+}
+
+.verger-map-marker-wrapper {
+  background: transparent;
+  border: 0;
+}
+
+.verger-map-marker {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--color-olive-500);
+  border: 3px solid rgba(250, 248, 244, 0.95);
+  box-shadow: 0 10px 18px rgba(61, 50, 37, 0.25);
+}
+
+.verger-map-marker.is-selected {
+  background: var(--color-harvest-400);
+  transform: scale(1.08);
+}
+
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background: rgba(95, 110, 39, 0.16);
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background: rgba(95, 110, 39, 0.92);
+  color: white;
+  font-weight: 700;
+}

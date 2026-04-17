@@ -1,0 +1,23 @@
+<div class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none">
+  <div
+    *ngFor="let toast of toasts"
+    class="pointer-events-auto min-w-[280px] max-w-[420px] rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-sm"
+    [style.background-color]="toast.type === 'success' ? '#f0fdf4' : toast.type === 'error' ? '#fef2f2' : '#fff7ed'"
+    [style.border-color]="toast.type === 'success' ? '#86efac' : toast.type === 'error' ? '#fca5a5' : '#fdba74'"
+    [style.color]="toast.type === 'success' ? '#166534' : toast.type === 'error' ? '#991b1b' : '#9a3412'"
+  >
+    <div class="flex items-start gap-3">
+      <span class="material-symbols-outlined text-[20px] mt-0.5">
+        {{ toast.type === 'success' ? 'check_circle' : toast.type === 'error' ? 'error' : 'progress_activity' }}
+      </span>
+      <div class="flex-1 text-sm font-medium leading-5">{{ toast.message }}</div>
+      <button
+        type="button"
+        (click)="dismiss(toast.id)"
+        class="material-symbols-outlined text-[18px] opacity-70 hover:opacity-100 transition-opacity"
+      >
+        close
+      </button>
+    </div>
+  </div>
+</div>
