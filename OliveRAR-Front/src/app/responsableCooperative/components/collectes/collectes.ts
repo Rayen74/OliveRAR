@@ -1,9 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, FormsModule, ValidationErrors } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { catchError, finalize, switchMap, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
+import { catchError, finalize, switchMap, take, tap } from 'rxjs/operators';
 import { SidebarComponent } from '../../../shared/components/sidebar/sidebar';
 import {
   Collecte,
@@ -11,7 +9,10 @@ import {
   CollecteMutationResponse,
   DropdownUser,
   DropdownVerger,
+  PaginatedCollecteResponse,
 } from '../../../shared/services/collecte-api.service';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-collectes',
@@ -20,10 +21,11 @@ import {
   templateUrl: './collectes.html',
   styleUrl: './collectes.css',
 })
-export class CollectesComponent implements OnInit {
+export class CollectesComponent implements OnInit, OnDestroy {
   // ---- data streams ----
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
-  collectesData$: Observable<any> | undefined;
+  collectesData$: Observable<PaginatedCollecteResponse> | undefined;
+  private readonly destroy$ = new Subject<void>();
 
   get todayDate(): string {
     return new Date().toISOString().split('T')[0];
@@ -74,7 +76,10 @@ export class CollectesComponent implements OnInit {
     });
   }
 
-  private futureDateValidator(control: any): any {
+  /**
+   * Validator to ensure selected date is not in the past.
+   */
+  private futureDateValidator(control: AbstractControl): ValidationErrors | null {
     if (!control.value) return null;
     const selected = new Date(control.value);
     const today = new Date();
@@ -97,11 +102,19 @@ export class CollectesComponent implements OnInit {
         this.collecteApi.getAll(this.currentPage, this.pageSize, this.filterChefId, this.filterStatut).pipe(
           catchError(() => {
             this.error = 'Impossible de charger les collectes.';
-            return of({ items: [], totalItems: 0, totalPages: 1, page: 1 });
+            return of({
+              items: [],
+              totalItems: 0,
+              totalPages: 1,
+              page: 0,
+              limit: this.pageSize,
+              hasNext: false,
+              hasPrevious: false
+             } as PaginatedCollecteResponse);
           }),
         ),
       ),
-      tap((res: any) => {
+      tap((res: PaginatedCollecteResponse) => {
         this.totalItems = res.totalItems ?? 0;
         this.totalPages = Math.max(1, res.totalPages ?? 1);
         this.isLoading = false;
@@ -109,6 +122,14 @@ export class CollectesComponent implements OnInit {
     );
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * Triggers a data refresh when filters change.
+   */
   onFilterChange(): void {
     this.currentPage = 0;
     this.refreshTrigger$.next();
@@ -118,18 +139,21 @@ export class CollectesComponent implements OnInit {
   //  Dropdown loading
   // ------------------------------------------------------------------ //
 
+  /**
+   * Loads necessary dropdown data for the forms.
+   */
   private loadDropdowns(): void {
-    this.collecteApi.getReadyVergers().subscribe({
+    this.collecteApi.getReadyVergers().pipe(take(1)).subscribe({
       next: (v) => (this.readyVergers = v),
       error: () => { },
     });
 
-    this.collecteApi.getUsersByRole('RESPONSABLE_CHEF_RECOLTE').subscribe({
+    this.collecteApi.getUsersByRole('RESPONSABLE_CHEF_RECOLTE').pipe(take(1)).subscribe({
       next: (res) => (this.chefsRecolte = res.users ?? []),
       error: () => { },
     });
 
-    this.collecteApi.getUsersByRole('RESPONSABLE_LOGISTIQUE').subscribe({
+    this.collecteApi.getUsersByRole('RESPONSABLE_LOGISTIQUE').pipe(take(1)).subscribe({
       next: (res) => (this.responsablesAffectation = res.users ?? []),
       error: () => { },
     });

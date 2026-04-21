@@ -7,12 +7,15 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -28,7 +31,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    private final SecretKey jwtKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+    @Value("${app.security.jwt.secret:olive-rar-development-secret-key-change-me-before-production-2026-secure}")
+    private String jwtSecret;
 
     public User login(User loginUser) {
         log.info("Login attempt for email: {}", loginUser.getEmail());
@@ -56,11 +60,30 @@ public class AuthService {
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date(now))
                 .setExpiration(new Date(now + 86400000))
-                .signWith(jwtKey)
+                .signWith(getJwtKey(), SignatureAlgorithm.HS512)
                 .compact();
 
-        log.info("JWT Generated for user {}: {}", user.getEmail(), token);
+        log.info("JWT generated for user {}", user.getEmail());
         return token;
+    }
+
+    public String extractEmail(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getJwtKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    public boolean isTokenValid(String token) {
+        try {
+            String email = extractEmail(token);
+            return StringUtils.hasText(email);
+        } catch (Exception e) {
+            log.warn("Invalid JWT token: {}", e.getMessage());
+            return false;
+        }
     }
 
     public void createPasswordResetToken(String email) {
@@ -158,5 +181,9 @@ public class AuthService {
         if (!phoneNumber.matches("\\d{8}")) {
             throw new RuntimeException("Le numero de telephone doit contenir exactement 8 chiffres.");
         }
+    }
+
+    private SecretKey getJwtKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 }

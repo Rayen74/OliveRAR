@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Role, User } from '../../../auth/auth.service';
+import { API_PREFIX } from '../../../shared/config/api.config';
 
 export interface ManagedUser extends User {
   id: string;
@@ -57,7 +58,7 @@ export interface UpdateProfilePayload {
 
 @Injectable({ providedIn: 'root' })
 export class UsersService {
-  private readonly apiUrl = 'http://localhost:8080/api/users';
+  private readonly apiUrl = `${API_PREFIX}/users`;
 
   constructor(private http: HttpClient) { }
 

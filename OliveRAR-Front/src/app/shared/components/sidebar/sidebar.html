@@ -2,7 +2,10 @@
   <div class="border-b border-gray-100 px-3 py-4">
     <ng-container *ngIf="currentUser$ | async as currentUser">
       <a
-        routerLink="/responsable/profile"
+        [routerLink]="currentUser.role === 'AGRICULTEUR' ? '/agriculteur/profile' :
+                     currentUser.role === 'RESPONSABLE_COOPERATIVE' ? '/responsable/profile' :
+                     currentUser.role === 'RESPONSABLE_LOGISTIQUE' ? '/responsable-logistique/profile' :
+                     currentUser.role === 'RESPONSABLE_CHEF_RECOLTE' ? '/responsable-chef-recolte/profile' : '/login'"
         class="flex items-center gap-3 rounded-2xl border border-[#e4dcc8] bg-[#f7f4ec] px-4 py-3 shadow-sm transition-all duration-150 hover:border-olive-200 hover:shadow-md"
       >
         <ng-container *ngIf="currentUser.imageUrl; else avatarFallbackTop">
@@ -36,7 +39,7 @@
       *ngFor="let item of menuItems"
       [routerLink]="item.link"
       routerLinkActive="border-r-2 border-olive-500 bg-olive-50 font-semibold text-olive-700"
-      [routerLinkActiveOptions]="{ exact: item.link === '/responsable/profile' || item.link === '/responsable/collectes' }"
+      [routerLinkActiveOptions]="{ exact: true }"
       class="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-earth-text transition-all duration-150 hover:bg-olive-50 hover:text-olive-700"
     >
       <span class="material-symbols-outlined text-[20px] text-earth-muted transition-colors group-hover:text-olive-600">
@@ -46,7 +49,7 @@
       <span class="flex-1">{{ item.label }}</span>
 
       <span
-        *ngIf="item.link === '/responsable/notifications' && nonLues > 0"
+        *ngIf="(item.link.includes('notifications')) && nonLues > 0"
         class="rounded-full bg-olive-600 px-2 py-0.5 text-xs font-bold text-white">
         {{ nonLues }}
       </span>

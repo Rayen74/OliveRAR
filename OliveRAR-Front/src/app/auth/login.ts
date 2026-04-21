@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, AuthResponse, Role } from './auth.service';
-import { AlertApiService } from '../shared/services/alert-api.service';
+import { AlertApiService, AlertItem } from '../shared/services/alert-api.service';
 import { NotificationService } from '../shared/services/notification';
 
 @Component({
@@ -122,7 +122,7 @@ export class LoginComponent {
           if (response.user.role === Role.RESPONSABLE_COOPERATIVE) {
             this.alertApi.getByRole('RESPONSABLE_COOPERATIVE').subscribe({
               next: (alerts) => {
-                const count = alerts.filter((a: any) => !a.lu).length;
+                const count = alerts.filter((a: AlertItem) => !a.lu).length;
                 this.notificationService.setNonLues(count);
               },
               error: () => { }

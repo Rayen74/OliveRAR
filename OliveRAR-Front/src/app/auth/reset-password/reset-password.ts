@@ -159,7 +159,7 @@ export class ResetPasswordComponent implements OnInit {
     this.errorMsg = '';
 
     this.authService.resetPassword(this.token, password).subscribe({
-      next: (response: any) => {
+      next: (response: { message?: string }) => {
         this.loading = false;
         this.cdr.detectChanges();
 

@@ -180,7 +180,7 @@
               </ng-container>
               <ng-template #userInitials>
                 <div class="flex h-11 w-11 items-center justify-center rounded-full border border-olive-100 bg-olive-100 text-sm font-semibold text-olive-700">
-                  {{ (user.prenom?.charAt(0) || '') + (user.nom?.charAt(0) || '') }}
+                  {{ (user.prenom || '').charAt(0) }}{{ (user.nom || '').charAt(0) }}
                 </div>
               </ng-template>
               <div class="min-w-0">

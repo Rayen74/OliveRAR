@@ -49,7 +49,7 @@ export class VergerMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   private leaflet?: typeof Leaflet;
   private map?: Leaflet.Map;
   private tileLayer?: Leaflet.TileLayer;
-  private markerLayer?: Leaflet.LayerGroup | any;
+  private markerLayer?: Leaflet.LayerGroup;
   private selectionMarker?: Leaflet.Marker;
   private readonly defaultCenter: [number, number] = [34.7398, 10.7603];
 
@@ -146,14 +146,17 @@ export class VergerMapComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.fitMap(validMarkers);
   }
 
-  private buildMarkerLayer(markers: VergerMapMarker[]): Leaflet.LayerGroup | any {
+  private buildMarkerLayer(markers: VergerMapMarker[]): Leaflet.LayerGroup {
     if (!this.leaflet) {
       throw new Error('Leaflet is not loaded.');
     }
 
-    const useCluster = markers.length >= 12 && typeof (this.leaflet as any).markerClusterGroup === 'function';
-    const layerGroup = useCluster
-      ? (this.leaflet as any).markerClusterGroup({
+    type LeafletWithCluster = typeof Leaflet & { markerClusterGroup?: (options?: unknown) => Leaflet.LayerGroup };
+    const extendedLeaflet = this.leaflet as unknown as LeafletWithCluster;
+
+    const useCluster = markers.length >= 12 && typeof extendedLeaflet.markerClusterGroup === 'function';
+    const layerGroup = useCluster && extendedLeaflet.markerClusterGroup
+      ? extendedLeaflet.markerClusterGroup({
         showCoverageOnHover: false,
         spiderfyOnMaxZoom: true
       })

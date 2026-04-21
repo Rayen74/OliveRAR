@@ -35,16 +35,27 @@ export class CommunauteApiService {
 
   constructor(private http: HttpClient) {}
 
+  /**
+   * Fetches all community posts.
+   */
   getPosts(): Observable<Post[]> {
     return this.http.get<Post[]>(this.apiUrl);
   }
 
-  // Accepte maintenant l'objet commentaire complet
-  commenter(postId: string, commentaire: any): Observable<Post> {
+  /**
+   * Adds a comment to a specific post.
+   * @param postId ID of the post
+   * @param commentaire Comment data
+   */
+  commenter(postId: string, commentaire: Partial<Commentaire>): Observable<Post> {
     return this.http.post<Post>(`${this.apiUrl}/${postId}/commentaires`, commentaire);
   }
 
-  creerPost(post: any): Observable<Post> {
+  /**
+   * Creates a new community post.
+   * @param post Post creation data
+   */
+  creerPost(post: Partial<Post>): Observable<Post> {
     return this.http.post<Post>(this.apiUrl, post);
   }
 

@@ -2,14 +2,14 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommunauteApiService, Post } from '../../../shared/services/communaute-api.sevice';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { AgriculteurSidebarComponent } from '../agriculteur-sidebar/agriculteur-sidebar';
+import { SidebarComponent } from '../../../shared/components/sidebar/sidebar';
 
 @Component({
   selector: 'app-communaute',
   templateUrl: './communaute.html',
   styleUrls: ['./communaute.css'],
   standalone: true,
-  imports: [FormsModule, CommonModule, AgriculteurSidebarComponent]
+  imports: [FormsModule, CommonModule, SidebarComponent]
 })
 export class CommunauteComponent implements OnInit {
 
@@ -38,7 +38,10 @@ export class CommunauteComponent implements OnInit {
     this.chargerPosts();
   }
 
-  chargerPosts() {
+  /**
+   * Loads all posts from the community API.
+   */
+  chargerPosts(): void {
     this.api.getPosts().subscribe({
       next: (data) => {
         this.posts = data;
@@ -48,12 +51,17 @@ export class CommunauteComponent implements OnInit {
     });
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
+  /**
+   * Handles image file selection and generates a preview URL.
+   * @param event Input change event
+   */
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.imageSelectionnee = e.target.result;
+      reader.onload = (e: ProgressEvent<FileReader>) => {
+        this.imageSelectionnee = e.target?.result as string;
         this.cdr.detectChanges();
       };
       reader.readAsDataURL(file);
@@ -70,11 +78,11 @@ export class CommunauteComponent implements OnInit {
     const userStr = localStorage.getItem('user');
     const userConnecte = JSON.parse(userStr!);
 
-    const postAEnvoyer = {
+    const postAEnvoyer: Partial<Post> = {
       ...this.nouveauPost,
       agriculteurId: this.userIdConnecte,
       agriculteurNom: userConnecte.nom + ' ' + userConnecte.prenom,
-      imagePost: this.imageSelectionnee
+      imagePost: this.imageSelectionnee || undefined
     };
 
     this.api.creerPost(postAEnvoyer).subscribe(() => {

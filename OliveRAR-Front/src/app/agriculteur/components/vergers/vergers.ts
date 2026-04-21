@@ -3,8 +3,8 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
-import { AuthService } from '../../../auth/auth.service';
-import { AgriculteurSidebarComponent } from '../agriculteur-sidebar/agriculteur-sidebar';
+import { AuthService, User } from '../../../auth/auth.service';
+import { SidebarComponent } from '../../../shared/components/sidebar/sidebar';
 import { VergerMapComponent } from '../../../shared/components/verger-map/verger-map';
 import { ReverseGeocodingService } from '../../../shared/services/reverse-geocoding.service';
 import {
@@ -16,7 +16,7 @@ import {
 @Component({
   selector: 'app-vergers',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgriculteurSidebarComponent, VergerMapComponent],
+  imports: [CommonModule, FormsModule, SidebarComponent, VergerMapComponent],
   templateUrl: './vergers.html',
   styleUrl: './vergers.css'
 })
@@ -24,7 +24,7 @@ export class VergersComponent implements OnInit, OnDestroy {
   vergers: Verger[] = [];
   loading = false;
   error = '';
-  user: any;
+  user: User | null = null;
   detailError = '';
   detailLoading = false;
 

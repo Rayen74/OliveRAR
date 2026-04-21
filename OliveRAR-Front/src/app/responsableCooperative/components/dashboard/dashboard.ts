@@ -57,8 +57,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  onVergerChange(event: any): void {
-    const selectedId = event.target.value;
+  onVergerChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const selectedId = target.value;
     this.selectedVerger = this.vergers.find(v => v.id === selectedId) || null;
     this.cdr.markForCheck();
   }

@@ -10,7 +10,8 @@ import {
   ManagedUser,
   UserMutationResponse,
   UpdateManagedUserPayload,
-  UsersService
+  UsersService,
+  UsersResponse
 } from './users.service';
 
 @Component({
@@ -21,7 +22,7 @@ import {
 })
 export class UsersComponent implements OnInit {
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
-  usersData$: Observable<any> | undefined;
+  usersData$: Observable<UsersResponse> | undefined;
 
   isLoading = false;
   isSubmitting = false;
@@ -90,6 +91,10 @@ export class UsersComponent implements OnInit {
     return /^\d{8}$/.test(phoneNumber) ? '' : 'Le numero doit contenir exactement 8 chiffres.';
   }
 
+  /**
+   * Complex password validation logic.
+   * @param password Raw password string
+   */
   getPasswordValidationErrors(password: string): string[] {
     const errors: string[] = [];
 
@@ -137,11 +142,11 @@ export class UsersComponent implements OnInit {
           .pipe(
             catchError(() => {
               this.error = 'Impossible de charger la liste.';
-              return of({ users: [], totalElements: 0, totalPages: 1 });
+              return of({ users: [], totalElements: 0, totalPages: 1, page: 0, size: this.pageSize, success: false, } as UsersResponse);
             })
           )
       ),
-      tap((response) => {
+      tap((response: UsersResponse) => {
         this.totalElements = response.totalElements ?? 0;
         this.totalPages = Math.max(1, response.totalPages ?? 1);
         this.isLoading = false;

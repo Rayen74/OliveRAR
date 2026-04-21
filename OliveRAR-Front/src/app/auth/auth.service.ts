@@ -2,6 +2,8 @@ import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { ApiResponse } from '../shared/models/api-response.model';
+import { API_PREFIX } from '../shared/config/api.config';
 
 export enum Role {
   RESPONSABLE_COOPERATIVE = 'RESPONSABLE_COOPERATIVE',
@@ -35,20 +37,16 @@ export interface RegisterRequest {
   role: Role;
 }
 
-export interface AuthResponse {
-  user?: User;
+export interface AuthResponse extends ApiResponse<User> {
   token?: string;
-  message?: string;
-  success?: boolean;
   id?: string;
-  [key: string]: any;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = `${API_PREFIX}/auth`;
   private readonly tokenStorageKey = 'token';
   private readonly userStorageKey = 'user';
   private readonly currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -75,24 +73,39 @@ export class AuthService {
     }
   }
 
+  /**
+   * Authenticates a user with email and password.
+   */
   login(credentials: LoginRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials);
   }
 
+  /**
+   * Registers a new user.
+   */
   register(userData: RegisterRequest): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/register`, userData);
   }
 
-  forgotPassword(email: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/forgot-password`, { email });
+  /**
+   * Sends a password reset email.
+   */
+  forgotPassword(email: string): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`${this.apiUrl}/forgot-password`, { email });
   }
 
-  resetPassword(token: string, password: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/reset-password`, { token, password });
+  /**
+   * Resets the password using a valid token.
+   */
+  resetPassword(token: string, password: string): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`${this.apiUrl}/reset-password`, { token, password });
   }
 
-  validateResetToken(token: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/validate-reset-token`, { params: { token } });
+  /**
+   * Validates a password reset token.
+   */
+  validateResetToken(token: string): Observable<ApiResponse> {
+    return this.http.get<ApiResponse>(`${this.apiUrl}/validate-reset-token`, { params: { token } });
   }
 
   setSession(token: string, user: User): void {

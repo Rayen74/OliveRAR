@@ -83,14 +83,14 @@ export class CollecteCalendarComponent implements OnInit {
           this.calendarOptions = { ...this.calendarOptions, events };
           this.isLoading = false;
           this.cdr.detectChanges();
-        } catch (err: any) {
-          this.error = "Erreur JS lors du rendu : " + (err.message || err);
+        } catch (err: unknown) {
+          this.error = "Erreur JS lors du rendu : " + (err instanceof Error ? err.message : String(err));
           this.isLoading = false;
           this.cdr.detectChanges();
         }
       },
-      error: (err: any) => {
-        this.error = 'Erreur HTTP API : ' + (err.message || JSON.stringify(err));
+      error: (err: unknown) => {
+        this.error = 'Erreur HTTP API : ' + (err instanceof Error ? err.message : String(err));
         this.isLoading = false;
         this.cdr.detectChanges();
       },
