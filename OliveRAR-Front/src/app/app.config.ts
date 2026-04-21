@@ -5,7 +5,7 @@ import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 // Ajoutez withFetch ici
 import { provideHttpClient, withInterceptors, withFetch } from '@angular/common/http';
-import { authTokenInterceptor } from './auth/auth-token.interceptor';
+import { authTokenInterceptor } from './core/interceptors/auth-token.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [

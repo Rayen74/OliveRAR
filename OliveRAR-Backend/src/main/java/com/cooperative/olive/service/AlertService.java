@@ -6,6 +6,7 @@ import com.cooperative.olive.entity.Alert;
 import com.cooperative.olive.entity.Post;
 import com.cooperative.olive.entity.User;
 import com.cooperative.olive.entity.Verger;
+import com.cooperative.olive.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -80,7 +81,7 @@ public class AlertService {
 
     public Alert marquerLu(String id) {
         Alert alert = alertRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Alert non trouvee"));
+                .orElseThrow(() -> new ResourceNotFoundException("Alerte introuvable."));
         alert.setLu(true);
         return alertRepository.save(alert);
     }

@@ -1,40 +1,58 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './auth/login';
-import { ForgotPasswordComponent } from './auth/forgot-password/forgot-password';
-import { ResetPasswordComponent } from './auth/reset-password/reset-password';
-import { DashboardComponent } from './responsableCooperative/components/dashboard/dashboard';
-import { UsersComponent } from './responsableCooperative/components/users/users';
-import { SharedProfileComponent } from './shared/components/profile/profile';
-import { NotificationsresponsablecooperativeComponent } from './responsableCooperative/components/notificationsresponsablecooperative/notificationsresponsablecooperative';
-import { VergersComponent } from './agriculteur/components/vergers/vergers';
-import { NotificationsComponent } from './agriculteur/components/notifications/notifications';
-import { CollectesComponent } from './responsableCooperative/components/collectes/collectes';
-import { CollecteCalendarComponent } from './responsableCooperative/components/collecte-calendar/collecte-calendar';
-import { agriculteurGuard } from './auth/agriculteur.guard';
-import { authGuard } from './auth/auth.guard';
-import { responsableCooperativeGuard } from './auth/responsable-cooperative.guard';
-// Responsable Logistique
-  import { EquipementsComponent } from './responsableLogistique/components/equipements/equipements';
-  import { ResponsableLogistiqueGuard } from './auth/responsable-logistique.guard';   // ← Correction ici
-// Responsable chef recolte
-  import { ResponsableChefRecolteGuard } from './auth/responsable-chef-recolte.guard';   // ← Correction ici
-//communaute agriculteur
-import { CommunauteComponent } from './agriculteur/components/communaute/communaute';
+import { agriculteurGuard } from './core/guards/agriculteur.guard';
+import { authGuard } from './core/guards/auth.guard';
+import { responsableChefRecolteGuard } from './core/guards/responsable-chef-recolte.guard';
+import { responsableCooperativeGuard } from './core/guards/responsable-cooperative.guard';
+import { responsableLogistiqueGuard } from './core/guards/responsable-logistique.guard';
+
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
-  { path: 'login', component: LoginComponent },
-  { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'reset-password', component: ResetPasswordComponent },
+  {
+    path: 'login',
+    loadComponent: () => import('./auth/login').then((m) => m.LoginComponent)
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./auth/forgot-password/forgot-password').then((m) => m.ForgotPasswordComponent)
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () => import('./auth/reset-password/reset-password').then((m) => m.ResetPasswordComponent)
+  },
   {
     path: 'responsable',
     canActivate: [authGuard, responsableCooperativeGuard],
     children: [
-      { path: 'dashboard', component: DashboardComponent },
-      { path: 'users', component: UsersComponent },
-      { path: 'profile', component: SharedProfileComponent },
-      { path: 'notifications', component: NotificationsresponsablecooperativeComponent },
-      { path: 'collectes', component: CollectesComponent },
-      { path: 'collectes/calendrier', component: CollecteCalendarComponent },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./features/dashboard/pages/dashboard/dashboard').then((m) => m.DashboardComponent)
+      },
+      {
+        path: 'users',
+        loadComponent: () => import('./features/users/pages/users/users').then((m) => m.UsersComponent)
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./features/notifications/pages/cooperative-notifications/notificationsresponsablecooperative')
+          .then((m) => m.NotificationsresponsablecooperativeComponent)
+      },
+      {
+        path: 'collectes',
+        loadComponent: () => import('./features/collectes/pages/collectes/collectes').then((m) => m.CollectesComponent)
+      },
+      {
+        path: 'collectes/calendrier',
+        loadComponent: () => import('./features/collectes/pages/collecte-calendar/collecte-calendar')
+          .then((m) => m.CollecteCalendarComponent)
+      },
+      {
+        path: 'tournees',
+        loadComponent: () => import('./features/tournees/pages/tournees/tournees').then((m) => m.TourneesPageComponent)
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
@@ -42,31 +60,59 @@ export const routes: Routes = [
     path: 'agriculteur',
     canActivate: [authGuard, agriculteurGuard],
     children: [
-      { path: 'vergers', component: VergersComponent },
-      { path: 'notifications', component: NotificationsComponent },
-      { path: 'profile', component: SharedProfileComponent },
-      { path: 'communaute', component: CommunauteComponent },         // ✅ Déplacé ici
+      {
+        path: 'vergers',
+        loadComponent: () => import('./features/vergers/pages/vergers/vergers').then((m) => m.VergersComponent)
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('./features/notifications/pages/agriculteur-notifications/notifications').then((m) => m.NotificationsComponent)
+      },
+      {
+        path: 'signalements',
+        loadComponent: () => import('./features/signalements/pages/signalements/signalements')
+          .then((m) => m.SignalementsPageComponent)
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
+      },
+      {
+        path: 'communaute',
+        loadComponent: () => import('./features/communaute/pages/communaute/communaute').then((m) => m.CommunauteComponent)
+      },
       { path: '', redirectTo: 'vergers', pathMatch: 'full' }
     ]
   },
-
-{
+  {
     path: 'responsable-logistique',
-    canActivate: [authGuard, ResponsableLogistiqueGuard],
+    canActivate: [authGuard, responsableLogistiqueGuard],
     children: [
-      { path: 'equipements', component: EquipementsComponent },
-      { path: 'profile', component: SharedProfileComponent },
-      { path: '', redirectTo: 'equipements', pathMatch: 'full' },
+      {
+        path: 'equipements',
+        loadComponent: () => import('./features/ressources/pages/equipements/equipements').then((m) => m.EquipementsComponent)
+      },
+      {
+        path: 'ressources',
+        loadComponent: () => import('./features/ressources/pages/equipements/equipements').then((m) => m.EquipementsComponent)
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
+      },
+      { path: '', redirectTo: 'ressources', pathMatch: 'full' },
     ]
   },
-{
+  {
     path: 'responsable-chef-recolte',
-    canActivate: [authGuard, ResponsableChefRecolteGuard ],
+    canActivate: [authGuard, responsableChefRecolteGuard],
     children: [
-      { path: 'profile', component: SharedProfileComponent},
+      {
+        path: 'profile',
+        loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
+      },
       { path: '', redirectTo: 'profile', pathMatch: 'full' },
     ]
   },
-
   { path: '**', redirectTo: 'login' }
 ];

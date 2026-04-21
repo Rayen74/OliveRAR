@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { SidebarComponent } from '../sidebar/sidebar';
-import { AuthService, User } from '../../../auth/auth.service';
-import { UsersService } from '../../../responsableCooperative/components/users/users.service';
+import { AuthService, User } from '../../../core/auth/auth.service';
+import { UsersService } from '../../../features/users/services/users.service';
 import { ToastService } from '../../services/toast.service';
 import { ApiResponse } from '../../models/api-response.model';
 

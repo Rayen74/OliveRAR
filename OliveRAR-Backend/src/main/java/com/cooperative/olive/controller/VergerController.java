@@ -2,13 +2,20 @@ package com.cooperative.olive.controller;
 
 import com.cooperative.olive.entity.Verger;
 import com.cooperative.olive.service.VergerService;
+import com.cooperative.olive.util.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/verger")
@@ -18,91 +25,57 @@ public class VergerController {
     private final VergerService vergerService;
 
     @GetMapping
-    public ResponseEntity<?> getAll(
+    public Object getAll(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer limit
     ) {
         if (page != null || limit != null) {
-            return ResponseEntity.ok(vergerService.getAllPaginated(page != null ? page : 1, limit != null ? limit : 5));
+            return vergerService.getAllPaginated(page != null ? page : 1, limit != null ? limit : 5);
         }
 
-        return ResponseEntity.ok(vergerService.getAll());
+        return vergerService.getAll();
     }
 
     @GetMapping("/agriculteur/{agriculteurId}")
-    public ResponseEntity<?> getByAgriculteur(
+    public Object getByAgriculteur(
             @PathVariable String agriculteurId,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer limit
     ) {
         if (page != null || limit != null) {
-            return ResponseEntity.ok(
-                    vergerService.getByAgriculteurPaginated(
-                            agriculteurId,
-                            page != null ? page : 1,
-                            limit != null ? limit : 5
-                    )
+            return vergerService.getByAgriculteurPaginated(
+                    agriculteurId,
+                    page != null ? page : 1,
+                    limit != null ? limit : 5
             );
         }
 
-        return ResponseEntity.ok(vergerService.getByAgriculteur(agriculteurId));
+        return vergerService.getByAgriculteur(agriculteurId);
     }
 
     @GetMapping("/ready")
-    public ResponseEntity<?> getReady() {
-        return ResponseEntity.ok(vergerService.getReadyVergers());
+    public List<Verger> getReady() {
+        return vergerService.getReadyVergers();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable String id) {
-        try {
-            return ResponseEntity.ok(vergerService.getById(id));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-        }
+    public Verger getById(@PathVariable String id) {
+        return vergerService.getById(id);
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Verger verger) {
-        try {
-            Verger created = vergerService.create(verger);
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                    "success", true,
-                    "data", created,
-                    "message", "Verger créé avec succès"
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
-        }
+    public ApiResponse<Verger> create(@Valid @RequestBody Verger verger) {
+        return ApiResponse.success("Verger créé avec succès.", vergerService.create(verger));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable String id, @RequestBody Verger verger) {
-        try {
-            Verger updated = vergerService.update(id, verger);
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "data", updated,
-                    "message", "Verger modifié avec succès"
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
-        }
+    public ApiResponse<Verger> update(@PathVariable String id, @Valid @RequestBody Verger verger) {
+        return ApiResponse.success("Verger modifié avec succès.", vergerService.update(id, verger));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable String id) {
-        try {
-            vergerService.delete(id);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Verger supprimé avec succès"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-        }
+    public ApiResponse<Void> delete(@PathVariable String id) {
+        vergerService.delete(id);
+        return ApiResponse.success("Verger supprimé avec succès.");
     }
 }

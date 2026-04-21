@@ -1,8 +1,12 @@
 package com.cooperative.olive.service;
 
-import com.cooperative.olive.dao.VergerRepository;
 import com.cooperative.olive.controller.PaginatedResponse;
+import com.cooperative.olive.dao.VergerRepository;
+import com.cooperative.olive.entity.Role;
 import com.cooperative.olive.entity.Verger;
+import com.cooperative.olive.exception.BusinessException;
+import com.cooperative.olive.exception.ResourceNotFoundException;
+import com.cooperative.olive.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,14 +21,14 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class VergerService {
 
-    private final VergerRepository vergerRepository;
-    private final AlertService alertService;
-
-    /** Allowed statut values (internal codes). */
     private static final Set<String> ALLOWED_STATUTS = Set.of(
             "EN_CROISSANCE",
             "PRET_POUR_RECOLTE"
     );
+
+    private final VergerRepository vergerRepository;
+    private final AlertService alertService;
+    private final CurrentUserService currentUserService;
 
     public List<Verger> getAll() {
         return vergerRepository.findAll();
@@ -41,26 +45,30 @@ public class VergerService {
     }
 
     public List<Verger> getByAgriculteur(String agriculteurId) {
+        currentUserService.requireOwnerOrRole(agriculteurId, Role.RESPONSABLE_COOPERATIVE);
         return vergerRepository.findByAgriculteurId(agriculteurId);
     }
 
     public PaginatedResponse<Verger> getByAgriculteurPaginated(String agriculteurId, int page, int limit) {
+        currentUserService.requireOwnerOrRole(agriculteurId, Role.RESPONSABLE_COOPERATIVE);
         Pageable pageable = buildPageable(page, limit);
         Page<Verger> vergerPage = vergerRepository.findByAgriculteurId(agriculteurId, pageable);
         return toPaginatedResponse(vergerPage);
     }
 
     public Verger getById(String id) {
-        return vergerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Verger non trouvé"));
+        Verger verger = vergerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Verger non trouvé."));
+        currentUserService.requireOwnerOrRole(verger.getAgriculteurId(), Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE);
+        return verger;
     }
 
     public Verger create(Verger verger) {
         validateVergerFields(verger);
+        applyOwnership(verger);
         checkDuplicateGeoLocalisation(verger, null);
 
         Verger saved = vergerRepository.save(verger);
-        // Send notification if already ready at creation
         if ("PRET_POUR_RECOLTE".equals(verger.getStatut())) {
             alertService.envoyerNotificationVergerPret(saved, saved.getAgriculteurId());
         }
@@ -68,10 +76,13 @@ public class VergerService {
     }
 
     public Verger update(String id, Verger updated) {
-        Verger existing = getById(id);
-        String ancienStatut = existing.getStatut();
+        Verger existing = vergerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Verger non trouvé."));
+        currentUserService.requireOwnerOrRole(existing.getAgriculteurId(), Role.RESPONSABLE_COOPERATIVE);
 
+        String previousStatus = existing.getStatut();
         validateVergerFields(updated);
+        updated.setAgriculteurId(existing.getAgriculteurId());
         checkDuplicateGeoLocalisation(updated, id);
 
         existing.setNom(updated.getNom());
@@ -87,14 +98,10 @@ public class VergerService {
 
         Verger saved = vergerRepository.save(existing);
 
-        // Send notification only if statut CHANGES to PRET_POUR_RECOLTE
-        if ("PRET_POUR_RECOLTE".equals(updated.getStatut())
-                && !"PRET_POUR_RECOLTE".equals(ancienStatut)) {
+        if ("PRET_POUR_RECOLTE".equals(updated.getStatut()) && !"PRET_POUR_RECOLTE".equals(previousStatus)) {
             alertService.envoyerNotificationVergerPret(saved, saved.getAgriculteurId());
         }
-        // If statut LEAVES PRET_POUR_RECOLTE → delete alerts
-        if ("PRET_POUR_RECOLTE".equals(ancienStatut)
-                && !"PRET_POUR_RECOLTE".equals(updated.getStatut())) {
+        if ("PRET_POUR_RECOLTE".equals(previousStatus) && !"PRET_POUR_RECOLTE".equals(updated.getStatut())) {
             alertService.supprimerAlertesVerger(existing.getId());
         }
 
@@ -102,34 +109,43 @@ public class VergerService {
     }
 
     public void delete(String id) {
+        Verger existing = vergerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Verger non trouvé."));
+        currentUserService.requireOwnerOrRole(existing.getAgriculteurId(), Role.RESPONSABLE_COOPERATIVE);
         vergerRepository.deleteById(id);
     }
 
-    // ------------------------------------------------------------------ //
-    //  VALIDATION
-    // ------------------------------------------------------------------ //
-
     private void validateVergerFields(Verger verger) {
-        // superficie: positive decimal
         if (verger.getSuperficie() <= 0) {
-            throw new RuntimeException("La superficie doit être un nombre décimal positif.");
+            throw new BusinessException("La superficie doit être un nombre décimal positif.");
         }
-        // nombreArbres: positive integer (> 0, no decimals)
         if (verger.getNombreArbres() <= 0) {
-            throw new RuntimeException("Le nombre d'arbres doit être un entier positif.");
+            throw new BusinessException("Le nombre d'arbres doit être un entier positif.");
         }
-        // rendement: positive decimal
         if (verger.getRendementEstime() <= 0) {
-            throw new RuntimeException("Le rendement estimé doit être un nombre décimal positif.");
+            throw new BusinessException("Le rendement estimé doit être un nombre décimal positif.");
         }
-        // statut whitelist
         if (verger.getStatut() == null || verger.getStatut().isBlank()) {
-            throw new RuntimeException("Le statut du verger est obligatoire.");
+            throw new BusinessException("Le statut du verger est obligatoire.");
         }
         if (!ALLOWED_STATUTS.contains(verger.getStatut())) {
-            throw new RuntimeException(
-                "Statut invalide. Valeurs autorisées : Prêt pour collecte, En croissance."
-            );
+            throw new BusinessException("Statut invalide. Valeurs autorisées : EN_CROISSANCE, PRET_POUR_RECOLTE.");
+        }
+    }
+
+    private void applyOwnership(Verger verger) {
+        var currentUser = currentUserService.getRequiredCurrentUser();
+        if (currentUser.getRole() == Role.AGRICULTEUR) {
+            verger.setAgriculteurId(currentUser.getId());
+            return;
+        }
+
+        if (currentUser.getRole() != Role.RESPONSABLE_COOPERATIVE) {
+            throw new BusinessException("Action non autorisée.");
+        }
+
+        if (verger.getAgriculteurId() == null || verger.getAgriculteurId().isBlank()) {
+            throw new BusinessException("L'agriculteur propriétaire est obligatoire.");
         }
     }
 
@@ -138,45 +154,36 @@ public class VergerService {
         boolean coordsDuplicate;
 
         if (excludedId == null) {
-            // Create: check all records
             localisationDuplicate = verger.getLocalisation() != null
                     && !verger.getLocalisation().isBlank()
-                    && vergerRepository.existsByLocalisation(verger.getLocalisation());
+                    && vergerRepository.existsByLocalisationIgnoreCase(verger.getLocalisation());
 
             coordsDuplicate = (verger.getLatitude() != 0 || verger.getLongitude() != 0)
                     && vergerRepository.existsByLatitudeAndLongitude(
-                            verger.getLatitude(), verger.getLongitude());
+                    verger.getLatitude(), verger.getLongitude());
         } else {
-            // Update: exclude self
             localisationDuplicate = verger.getLocalisation() != null
                     && !verger.getLocalisation().isBlank()
-                    && vergerRepository.existsByLocalisationAndIdNot(
-                            verger.getLocalisation(), excludedId);
+                    && vergerRepository.existsByLocalisationIgnoreCaseAndIdNot(
+                    verger.getLocalisation(), excludedId);
 
             coordsDuplicate = (verger.getLatitude() != 0 || verger.getLongitude() != 0)
                     && vergerRepository.existsByLatitudeAndLongitudeAndIdNot(
-                            verger.getLatitude(), verger.getLongitude(), excludedId);
+                    verger.getLatitude(), verger.getLongitude(), excludedId);
         }
 
         if (localisationDuplicate) {
-            throw new RuntimeException(
-                "Un verger avec la même localisation/adresse existe déjà."
-            );
+            throw new BusinessException("Un verger avec la même localisation/adresse existe déjà.");
         }
         if (coordsDuplicate) {
-            throw new RuntimeException(
-                "Un verger avec les mêmes coordonnées géographiques existe déjà."
-            );
+            throw new BusinessException("Un verger avec les mêmes coordonnées géographiques existe déjà.");
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  HELPERS
-    // ------------------------------------------------------------------ //
-
     private Pageable buildPageable(int page, int limit) {
         int safePage = Math.max(page, 1);
-        return PageRequest.of(safePage - 1, 5, Sort.by(Sort.Direction.ASC, "nom"));
+        int safeLimit = limit <= 0 ? 5 : Math.min(limit, 50);
+        return PageRequest.of(safePage - 1, safeLimit, Sort.by(Sort.Direction.ASC, "nom"));
     }
 
     private PaginatedResponse<Verger> toPaginatedResponse(Page<Verger> vergerPage) {
@@ -185,7 +192,7 @@ public class VergerService {
                 vergerPage.getTotalElements(),
                 vergerPage.getTotalPages(),
                 vergerPage.getNumber() + 1,
-                5
+                vergerPage.getSize()
         );
     }
 }

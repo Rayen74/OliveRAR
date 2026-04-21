@@ -13,8 +13,8 @@ public interface VergerRepository extends MongoRepository<Verger, String> {
     List<Verger> findByStatut(String statut);
 
     // Duplicate geo-localisation checks
-    boolean existsByLocalisation(String localisation);
-    boolean existsByLocalisationAndIdNot(String localisation, String id);
+    boolean existsByLocalisationIgnoreCase(String localisation);
+    boolean existsByLocalisationIgnoreCaseAndIdNot(String localisation, String id);
     boolean existsByLatitudeAndLongitude(double latitude, double longitude);
     boolean existsByLatitudeAndLongitudeAndIdNot(double latitude, double longitude, String id);
 }

@@ -1,0 +1,103 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8">
+
+    <header class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Calendrier des collectes</h1>
+        <p class="text-sm text-earth-muted">Vue mensuelle et hebdomadaire des campagnes planifiées.</p>
+      </div>
+      <a
+        routerLink="/responsable/collectes"
+        class="inline-flex items-center gap-2 rounded-xl border border-earth-border bg-white px-4 py-2.5 text-sm text-earth-text shadow-sm transition-colors hover:bg-earth-bg"
+      >
+        <span class="material-symbols-outlined text-base">list</span>
+        Vue liste
+      </a>
+    </header>
+
+    <div class="mb-5 flex flex-wrap items-center gap-4">
+      <div class="flex items-center gap-1.5">
+        <span class="h-3 w-3 rounded-full bg-[#8a9e3a]"></span>
+        <span class="text-xs text-earth-muted">Planifiée</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="h-3 w-3 rounded-full bg-[#f5b731]"></span>
+        <span class="text-xs text-earth-muted">En cours</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="h-3 w-3 rounded-full bg-[#5f6e27]"></span>
+        <span class="text-xs text-earth-muted">Terminée</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="h-3 w-3 rounded-full bg-[#ef4444]"></span>
+        <span class="text-xs text-earth-muted">Annulée</span>
+      </div>
+    </div>
+
+    <div *ngIf="error" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
+
+    <div *ngIf="isLoading" class="flex h-64 items-center justify-center text-earth-muted">
+      <div class="flex items-center gap-2">
+        <div class="h-5 w-5 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+        Chargement du calendrier...
+      </div>
+    </div>
+
+    <div *ngIf="!isLoading && !error" class="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
+
+      <div class="calendar-card rounded-2xl border border-earth-border bg-white p-4 shadow-sm">
+        <full-calendar [options]="calendarOptions"></full-calendar>
+      </div>
+
+      <aside class="h-fit rounded-2xl border border-earth-border bg-white p-5 shadow-sm">
+        <p class="mb-4 text-xs uppercase tracking-[0.15em] text-earth-muted">Détail de la collecte</p>
+
+        <div *ngIf="selectedEvent; else noSelection">
+          <div class="mb-4 flex items-start justify-between">
+            <h3 class="text-lg font-semibold text-earth-text">{{ selectedEvent.vergerNom }}</h3>
+            <button (click)="closeDetail()" class="text-earth-muted hover:text-earth-text">
+              <span class="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+
+          <span class="mb-4 inline-block rounded-full px-3 py-1 text-xs font-semibold" [ngClass]="statutBadgeClass(selectedEvent.statut)">
+            {{ formatStatut(selectedEvent.statut) }}
+          </span>
+
+          <div class="mt-3 space-y-3 rounded-xl border border-earth-border bg-earth-bg px-4 py-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-earth-muted">Date prévue</span>
+              <span class="font-medium text-earth-text">{{ selectedEvent.datePrevue }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-earth-muted">Chef de récolte</span>
+              <span class="font-medium text-earth-text">{{ selectedEvent.chefRecolteNom || '—' }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-earth-muted">Équipe</span>
+              <span class="font-medium text-earth-text">{{ selectedEvent.equipeSize }} ouvrier(s)</span>
+            </div>
+          </div>
+
+          <a
+            [routerLink]="['/responsable/collectes']"
+            class="mt-4 inline-flex items-center gap-2 rounded-lg bg-olive-600 px-3 py-2 text-xs text-white transition-colors hover:bg-olive-700"
+          >
+            <span class="material-symbols-outlined text-sm">edit</span>
+            Gérer dans la liste
+          </a>
+        </div>
+
+        <ng-template #noSelection>
+          <div class="flex flex-col items-center py-10 text-center text-earth-muted">
+            <span class="material-symbols-outlined mb-2 text-4xl text-earth-border">touch_app</span>
+            <p class="text-sm">Cliquez sur un événement du calendrier pour en voir les détails.</p>
+          </div>
+        </ng-template>
+      </aside>
+
+    </div>
+  </main>
+</div>

@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_PREFIX } from '../../core/config/api.config';
 
-// Interface pour correspondre à votre entité MongoDB
 export interface Commentaire {
   id?: string;
   contenu: string;
@@ -30,31 +30,18 @@ export interface Post {
   providedIn: 'root'
 })
 export class CommunauteApiService {
-  // CRITIQUE : Déclaration de la variable apiUrl manquante
-  private apiUrl = 'http://localhost:8080/api/posts';
+  private readonly apiUrl = `${API_PREFIX}/posts`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
-  /**
-   * Fetches all community posts.
-   */
   getPosts(): Observable<Post[]> {
     return this.http.get<Post[]>(this.apiUrl);
   }
 
-  /**
-   * Adds a comment to a specific post.
-   * @param postId ID of the post
-   * @param commentaire Comment data
-   */
   commenter(postId: string, commentaire: Partial<Commentaire>): Observable<Post> {
     return this.http.post<Post>(`${this.apiUrl}/${postId}/commentaires`, commentaire);
   }
 
-  /**
-   * Creates a new community post.
-   * @param post Post creation data
-   */
   creerPost(post: Partial<Post>): Observable<Post> {
     return this.http.post<Post>(this.apiUrl, post);
   }

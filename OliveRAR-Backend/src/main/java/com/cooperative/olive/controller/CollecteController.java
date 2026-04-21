@@ -2,12 +2,19 @@ package com.cooperative.olive.controller;
 
 import com.cooperative.olive.entity.Collecte;
 import com.cooperative.olive.service.CollecteService;
+import com.cooperative.olive.util.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -18,79 +25,38 @@ public class CollecteController {
     private final CollecteService collecteService;
 
     @GetMapping
-    public ResponseEntity<?> getAll(
+    public PaginatedResponse<Map<String, Object>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(required = false) String chefRecolteId,
             @RequestParam(required = false) String statut
     ) {
-        try {
-            return ResponseEntity.ok(collecteService.getAllPaginated(page, size, chefRecolteId, statut));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
+        return collecteService.getAllPaginated(page, size, chefRecolteId, statut);
     }
 
     @GetMapping("/calendar")
-    public ResponseEntity<?> getCalendar() {
-        try {
-            List<Map<String, Object>> items = collecteService.getAllForCalendar();
-            return ResponseEntity.ok(Map.of("success", true, "data", items));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
+    public ApiResponse<Object> getCalendar() {
+        return ApiResponse.success("Calendrier des collectes récupéré avec succès.", collecteService.getAllForCalendar());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable String id) {
-        try {
-            return ResponseEntity.ok(Map.of("success", true, "data", collecteService.getById(id)));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
+    public ApiResponse<Object> getById(@PathVariable String id) {
+        return ApiResponse.success("Collecte récupérée avec succès.", collecteService.getById(id));
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Collecte collecte) {
-        try {
-            Collecte created = collecteService.create(collecte);
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                    "success", true,
-                    "message", "Collecte créée avec succès",
-                    "data", created
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
+    public ApiResponse<Collecte> create(@Valid @RequestBody Collecte collecte) {
+        return ApiResponse.success("Collecte créée avec succès.", collecteService.create(collecte));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable String id, @RequestBody Collecte collecte) {
-        try {
-            Collecte updated = collecteService.update(id, collecte);
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Collecte mise à jour avec succès",
-                    "data", updated
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
+    public ApiResponse<Collecte> update(@PathVariable String id, @Valid @RequestBody Collecte collecte) {
+        return ApiResponse.success("Collecte mise à jour avec succès.", collecteService.update(id, collecte));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable String id) {
-        try {
-            collecteService.delete(id);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Collecte supprimée avec succès"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
+    public ApiResponse<Void> delete(@PathVariable String id) {
+        collecteService.delete(id);
+        return ApiResponse.success("Collecte supprimée avec succès.");
     }
 }
