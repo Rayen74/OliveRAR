@@ -8,10 +8,15 @@ import com.cooperative.olive.entity.User;
 import com.cooperative.olive.exception.ForbiddenOperationException;
 import com.cooperative.olive.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.HashSet;
 import java.util.UUID;
 
 @Service
@@ -23,7 +28,10 @@ public class PostService {
     @Autowired
     private UserRepository userRepository;
 
-    public Post creerPost(Post post) {
+    @Autowired
+    private ImageService imageService;
+
+    public Post creerPost(Post post, MultipartFile file) {
         User user = userRepository.findById(post.getAgriculteurId())
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé."));
 
@@ -31,11 +39,21 @@ public class PostService {
         post.setAgriculteurNom(user.getNom() + " " + user.getPrenom());
         post.setAgriculteurPhoto(user.getImageUrl());
 
+        if (file != null && !file.isEmpty()) {
+            try {
+                String imageUrl = imageService.uploadImage(file);
+                post.setImagePost(imageUrl);
+            } catch (IOException e) {
+                // Ignore upload error or handle it
+                post.setImagePost(null);
+            }
+        }
+
         return postRepository.save(post);
     }
 
-    public List<Post> getTousLesPosts() {
-        return postRepository.findAllByOrderByDateCreationDesc();
+    public Page<Post> getTousLesPosts(Pageable pageable) {
+        return postRepository.findAllByOrderByDateCreationDesc(pageable);
     }
 
     public Post getPostById(String id) {
@@ -56,9 +74,16 @@ public class PostService {
         postRepository.deleteById(id);
     }
 
-    public Post likePost(String id) {
+    public Post likePost(String id, String userId) {
         Post post = getPostById(id);
-        post.setLikes(post.getLikes() + 1);
+        if (post.getLikedBy() == null) {
+            post.setLikedBy(new HashSet<>());
+        }
+        if (post.getLikedBy().contains(userId)) {
+            post.getLikedBy().remove(userId);
+        } else {
+            post.getLikedBy().add(userId);
+        }
         return postRepository.save(post);
     }
 
@@ -75,5 +100,23 @@ public class PostService {
 
         post.getCommentaires().add(commentaire);
         return postRepository.save(post);
+    }
+
+    public void supprimerCommentaire(String postId, String commentaireId, String userIdDemandeur) {
+        Post post = getPostById(postId);
+        
+        Commentaire commentaireASupprimer = post.getCommentaires().stream()
+                .filter(c -> c.getId().equals(commentaireId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Commentaire non trouvé."));
+
+        // Autoriser la suppression si l'utilisateur est l'auteur du commentaire OU l'auteur du post
+        if (!commentaireASupprimer.getAgriculteurId().equals(userIdDemandeur) && 
+            !post.getAgriculteurId().equals(userIdDemandeur)) {
+            throw new ForbiddenOperationException("Action interdite : vous ne pouvez pas supprimer ce commentaire.");
+        }
+
+        post.getCommentaires().removeIf(c -> c.getId().equals(commentaireId));
+        postRepository.save(post);
     }
 }

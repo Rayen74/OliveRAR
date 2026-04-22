@@ -5,7 +5,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Document(collection = "posts")
 public class Post {
@@ -25,7 +27,7 @@ public class Post {
 
     private List<Commentaire> commentaires = new ArrayList<>();
 
-    private int likes = 0;
+    private Set<String> likedBy = new HashSet<>();
     private String imagePost;
 
     // Getters & Setters
@@ -54,8 +56,10 @@ public class Post {
     public List<Commentaire> getCommentaires() { return commentaires; }
     public void setCommentaires(List<Commentaire> commentaires) { this.commentaires = commentaires; }
 
-    public int getLikes() { return likes; }
-    public void setLikes(int likes) { this.likes = likes; }
+    public Set<String> getLikedBy() { return likedBy; }
+    public void setLikedBy(Set<String> likedBy) { this.likedBy = likedBy; }
+
+    public int getLikes() { return likedBy != null ? likedBy.size() : 0; }
 
     public String getAgriculteurPhoto() { return agriculteurPhoto; }
     public void setAgriculteurPhoto(String agriculteurPhoto) { this.agriculteurPhoto = agriculteurPhoto; }

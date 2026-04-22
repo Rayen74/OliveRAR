@@ -7,23 +7,25 @@
       <p class="text-sm text-earth-muted">Échangez avec les autres agriculteurs et la coopérative.</p>
     </header>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_350px]">
-      <div class="space-y-6">
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px] max-w-7xl mx-auto">
+      <div class="space-y-8">
 
-        <section class="rounded-2xl border border-earth-border bg-white p-5 shadow-sm">
-          <div class="mb-4 flex items-center gap-2 text-olive-600">
-            <span class="material-symbols-outlined">edit_note</span>
-            <h2 class="font-semibold text-earth-text">Créer une publication</h2>
+        <section class="rounded-3xl border border-white/40 bg-white/80 p-6 shadow-xl backdrop-blur-md transition-all hover:shadow-2xl">
+          <div class="mb-5 flex items-center gap-3 text-olive-600">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-olive-100 shadow-inner">
+              <span class="material-symbols-outlined text-xl">edit_note</span>
+            </div>
+            <h2 class="text-lg font-bold text-earth-text">Créer une publication</h2>
           </div>
-          <div class="space-y-3">
+          <div class="space-y-4">
             <input [(ngModel)]="nouveauPost.titre"
                    placeholder="Titre de votre message"
-                   class="w-full rounded-xl border border-earth-border bg-earth-bg px-4 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+                   class="w-full rounded-2xl border-0 bg-earth-bg/50 px-5 py-3 text-sm text-earth-text shadow-inner outline-none ring-1 ring-earth-border transition-all focus:bg-white focus:ring-2 focus:ring-olive-500">
 
             <textarea [(ngModel)]="nouveauPost.contenu"
-                      placeholder="Que souhaitez-vous partager ?"
+                      placeholder="Que souhaitez-vous partager avec la communauté ?"
                       rows="3"
-                      class="w-full resize-none rounded-xl border border-earth-border bg-earth-bg px-4 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500"></textarea>
+                      class="w-full resize-none rounded-2xl border-0 bg-earth-bg/50 px-5 py-3 text-sm text-earth-text shadow-inner outline-none ring-1 ring-earth-border transition-all focus:bg-white focus:ring-2 focus:ring-olive-500"></textarea>
 
             <div *ngIf="imageSelectionnee" class="relative mt-2 inline-block">
               <img [src]="imageSelectionnee" class="h-32 w-32 rounded-lg object-cover border border-earth-border shadow-sm">
@@ -33,121 +35,152 @@
               </button>
             </div>
 
-            <div class="flex items-center justify-between border-t border-earth-border pt-3">
-              <label class="flex cursor-pointer items-center gap-2 text-earth-muted hover:text-olive-600 transition-colors">
-                <span class="material-symbols-outlined">image</span>
-                <span class="text-xs font-medium">Ajouter une photo</span>
+            <div class="flex items-center justify-between border-t border-earth-border/50 pt-4">
+              <label class="group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 transition-colors hover:bg-olive-50">
+                <span class="material-symbols-outlined text-olive-600 transition-transform group-hover:scale-110">image</span>
+                <span class="text-sm font-medium text-earth-muted group-hover:text-olive-700">Ajouter une photo</span>
                 <input type="file" (change)="onFileSelected($event)" accept="image/*" class="hidden">
               </label>
 
               <button (click)="publier()"
-                      [disabled]="!nouveauPost.titre || !nouveauPost.contenu"
-                      class="inline-flex items-center gap-2 rounded-xl bg-olive-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-olive-700 disabled:opacity-50">
-                <span class="material-symbols-outlined text-sm">send</span>
-                Publier
+                      [disabled]="!nouveauPost.titre || !nouveauPost.contenu || isPublishing"
+                      class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-olive-600 to-olive-500 px-8 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-olive-500/30 disabled:pointer-events-none disabled:opacity-50">
+                <span *ngIf="isPublishing" class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                <span *ngIf="!isPublishing" class="material-symbols-outlined text-sm">send</span>
+                {{ isPublishing ? 'Publication...' : 'Publier' }}
               </button>
             </div>
           </div>
         </section>
 
         <div class="space-y-4">
-          <article *ngFor="let post of posts" class="rounded-2xl border border-earth-border bg-white p-5 shadow-sm">
+          <article *ngFor="let post of posts$ | async" class="group relative rounded-3xl border border-white/60 bg-white p-6 shadow-md transition-all hover:shadow-xl">
 
             <div class="flex items-start justify-between">
-              <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 overflow-hidden items-center justify-center rounded-full bg-olive-100 font-bold text-olive-700 border border-earth-border">
+              <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-olive-100 to-olive-200 font-bold text-olive-700 shadow-inner ring-2 ring-white">
                   <img *ngIf="post.agriculteurPhoto" [src]="post.agriculteurPhoto" class="h-full w-full object-cover">
-                  <span *ngIf="!post.agriculteurPhoto">{{ post.agriculteurNom.charAt(0) }}</span>
+                  <span *ngIf="!post.agriculteurPhoto" class="text-lg">{{ post.agriculteurNom.charAt(0) }}</span>
                 </div>
                 <div>
-                  <h3 class="font-semibold text-earth-text">{{ post.agriculteurNom }}</h3>
-                  <p class="text-xs text-earth-muted">{{ post.dateCreation | date:'dd/MM/yyyy HH:mm' }}</p>
+                  <h3 class="font-bold text-earth-text">{{ post.agriculteurNom }}</h3>
+                  <p class="text-xs font-medium text-earth-muted">{{ post.dateCreation | date:'dd/MM/yyyy HH:mm' }}</p>
                 </div>
               </div>
 
               <button *ngIf="post.agriculteurId === userIdConnecte"
                       (click)="supprimer(post.id, post.agriculteurId)"
-                      class="text-earth-muted hover:text-red-500 transition-colors">
+                      class="rounded-full p-2 text-earth-muted opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100">
                 <span class="material-symbols-outlined text-lg">delete</span>
               </button>
             </div>
 
-            <div class="mt-4">
-              <h4 class="text-lg font-bold text-earth-text">{{ post.titre }}</h4>
-              <p class="mt-2 text-sm leading-relaxed text-earth-text">{{ post.contenu }}</p>
+            <div class="mt-5">
+              <h4 class="text-xl font-bold text-earth-text">{{ post.titre }}</h4>
+              <p class="mt-3 text-sm leading-relaxed text-earth-text/80">{{ post.contenu }}</p>
 
-              <div *ngIf="post.imagePost" class="mt-4 flex justify-center">
-                <div class="overflow-hidden rounded-xl border border-earth-border shadow-sm max-w-[500px]">
+              <div *ngIf="post.imagePost" class="mt-5 flex justify-center">
+                <div class="overflow-hidden rounded-2xl border border-earth-border/50 shadow-sm max-w-[500px]">
                   <img [src]="post.imagePost"
-                       class="max-h-[500px] w-full object-contain bg-black/5"
+                       class="max-h-[500px] w-full object-contain bg-earth-bg/30"
                        alt="Image de la publication">
                 </div>
               </div>
             </div>
 
-            <div class="mt-6 flex items-center gap-6 border-t border-earth-border pt-4">
+            <div class="mt-6 flex items-center gap-6 border-t border-earth-border/50 pt-4">
               <button (click)="liker(post.id)"
-                      class="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
-                      [ngClass]="post.likes > 0 ? 'text-red-500' : 'text-earth-muted'">
-                <span class="material-symbols-outlined text-xl"
-                      [style.font-variation-settings]="post.likes > 0 ? '\'FILL\' 1' : '\'FILL\' 0'">
+                      class="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold transition-all hover:bg-red-50"
+                      [ngClass]="post.likedBy?.includes(userIdConnecte) ? 'text-red-500' : 'text-earth-muted'">
+                <span class="material-symbols-outlined text-xl transition-transform active:scale-75"
+                      [style.font-variation-settings]="post.likedBy?.includes(userIdConnecte) ? '\'FILL\' 1' : '\'FILL\' 0'">
                   favorite
                 </span>
                 {{ post.likes }} J'aime
               </button>
-              <div class="flex items-center gap-2 text-sm font-medium text-earth-muted">
+              <div class="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-earth-muted transition-all hover:bg-olive-50 hover:text-olive-600">
                 <span class="material-symbols-outlined text-xl">chat_bubble</span>
-                {{ post.commentaires.length || 0 }} Commentaires
+                {{ post.commentaires?.length || 0 }} Commentaires
               </div>
             </div>
 
-            <div class="mt-4 space-y-3 rounded-xl bg-earth-bg p-4">
-              <div *ngFor="let c of post.commentaires" class="flex items-start gap-3 border-b border-earth-border/50 pb-3 last:border-0">
-                <div class="h-8 w-8 flex-shrink-0 overflow-hidden rounded-full bg-olive-100 flex items-center justify-center border border-earth-border">
+            <div class="mt-5 space-y-4 rounded-2xl bg-earth-bg/50 p-5 shadow-inner">
+              <div *ngFor="let c of post.commentaires" class="group/comment flex items-start gap-3 border-b border-white pb-4 last:border-0 last:pb-0">
+                <div class="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-olive-100 to-olive-200 flex items-center justify-center shadow-sm ring-1 ring-white">
                   <img *ngIf="c.agriculteurPhoto" [src]="c.agriculteurPhoto" class="h-full w-full object-cover">
-                  <span *ngIf="!c.agriculteurPhoto" class="text-[10px] font-bold text-olive-700">{{ c.agriculteurNom?.charAt(0) }}</span>
+                  <span *ngIf="!c.agriculteurPhoto" class="text-xs font-bold text-olive-700">{{ c.agriculteurNom?.charAt(0) }}</span>
                 </div>
-                <div class="flex-1">
+                <div class="flex-1 rounded-2xl rounded-tl-none bg-white p-3 shadow-sm relative">
                   <div class="flex items-center justify-between mb-1">
-                    <p class="text-xs font-bold text-olive-800">{{ c.agriculteurNom }}</p>
-                    <p class="text-[10px] text-earth-muted italic">{{ c.dateCreation | date:'dd/MM/yyyy HH:mm' }}</p>
+                    <p class="text-xs font-bold text-earth-text">{{ c.agriculteurNom }}</p>
+                    <div class="flex items-center gap-2">
+                      <p class="text-[10px] text-earth-muted italic">{{ c.dateCreation | date:'dd/MM/yyyy HH:mm' }}</p>
+                      <button *ngIf="c.agriculteurId === userIdConnecte || post.agriculteurId === userIdConnecte"
+                              (click)="supprimerCommentaire(post.id, c.id!)"
+                              class="text-earth-muted hover:text-red-500 transition-colors"
+                              title="Supprimer le commentaire">
+                        <span class="material-symbols-outlined text-[14px]">delete</span>
+                      </button>
+                    </div>
                   </div>
-                  <p class="text-sm text-earth-text">{{ c.contenu }}</p>
+                  <p class="text-sm leading-relaxed text-earth-text/90">{{ c.contenu }}</p>
                 </div>
               </div>
 
-              <div class="mt-2 flex gap-2">
+              <div class="mt-4 flex gap-3">
                 <input [(ngModel)]="nouveauCommentaire[post.id]"
                        placeholder="Écrire un commentaire..."
                        (keyup.enter)="commenter(post.id)"
-                       class="flex-1 rounded-lg border border-earth-border bg-white px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-olive-500">
+                       class="flex-1 rounded-full border-0 bg-white px-5 py-2 text-sm shadow-sm ring-1 ring-earth-border outline-none transition-all focus:ring-2 focus:ring-olive-500">
                 <button (click)="commenter(post.id)"
-                        class="rounded-lg bg-olive-600 px-3 text-white transition-colors hover:bg-olive-700">
+                        class="flex items-center justify-center rounded-full bg-olive-600 px-4 text-white shadow-md transition-all hover:bg-olive-700 hover:shadow-lg active:scale-95">
                   <span class="material-symbols-outlined text-sm">send</span>
                 </button>
               </div>
             </div>
           </article>
+
+          <div *ngIf="hasMore" class="flex justify-center pt-4">
+            <button (click)="chargerPlus()" 
+                    [disabled]="isLoading"
+                    class="rounded-full border border-earth-border bg-white px-6 py-2 text-sm font-medium text-earth-text shadow-sm transition-all hover:bg-earth-bg disabled:opacity-50 flex items-center gap-2">
+              <span *ngIf="isLoading" class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+              {{ isLoading ? 'Chargement...' : 'Voir plus de publications' }}
+            </button>
+          </div>
+          <div *ngIf="!hasMore && ((posts$ | async)?.length || 0) > 0" class="text-center pt-4 text-sm text-earth-muted">
+            Vous avez atteint la fin des publications.
+          </div>
         </div>
       </div>
 
       <aside class="hidden lg:block">
-        <div class="sticky top-8 space-y-4">
-          <div class="rounded-2xl border border-earth-border bg-white p-5 shadow-sm">
-            <h2 class="text-xs font-semibold uppercase tracking-[0.18em] text-earth-muted">Statistiques</h2>
-            <div class="mt-4 space-y-4">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-earth-muted">Total Publications</span>
-                <span class="font-bold text-earth-text">{{ posts.length }}</span>
+        <div class="sticky top-8 space-y-6">
+          <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl backdrop-blur-md">
+            <h2 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-earth-text">
+              <span class="material-symbols-outlined text-olive-600">monitoring</span>
+              Statistiques
+            </h2>
+            <div class="mt-5 space-y-5">
+              <div class="flex items-center justify-between rounded-2xl bg-earth-bg/50 p-4 shadow-inner">
+                <span class="text-sm font-medium text-earth-muted">Total Publications</span>
+                <span class="rounded-full bg-olive-100 px-3 py-1 text-sm font-bold text-olive-700">{{ (posts$ | async)?.length || 0 }}</span>
               </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-earth-muted">Membres actifs</span>
-                <span class="font-bold text-olive-600">En ligne</span>
+              <div class="flex items-center justify-between rounded-2xl bg-earth-bg/50 p-4 shadow-inner">
+                <span class="text-sm font-medium text-earth-muted">Membres actifs</span>
+                <span class="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-sm font-bold text-green-600">
+                  <span class="relative flex h-2 w-2">
+                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                  </span>
+                  En ligne
+                </span>
               </div>
             </div>
           </div>
-          <div class="rounded-2xl border border-earth-border bg-olive-50 p-5 shadow-sm">
-            <p class="text-sm font-medium text-olive-800 italic">
+          <div class="relative overflow-hidden rounded-3xl border border-olive-200 bg-gradient-to-br from-olive-50 to-white p-6 shadow-xl">
+            <span class="material-symbols-outlined absolute -right-4 -top-4 text-7xl text-olive-100 opacity-50">format_quote</span>
+            <p class="relative z-10 text-sm font-medium leading-relaxed text-olive-800 italic">
               "L'échange de savoir entre agriculteurs est la clé d'une récolte d'excellence à Sfax."
             </p>
           </div>
