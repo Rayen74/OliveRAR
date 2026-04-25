@@ -63,37 +63,37 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-earth-bg rounded-xl border border-earth-border">
                   <div>
-                    <p class="text-xs uppercase text-earth-muted mb-1">🌿 Verger</p>
+                    <p class="text-xs uppercase text-earth-muted mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">forest</span> Verger</p>
                     <p class="text-sm font-semibold text-earth-text">{{ alert.nomVerger }}</p>
                   </div>
                   <div>
-                    <p class="text-xs uppercase text-earth-muted mb-1">📍 Localisation</p>
+                    <p class="text-xs uppercase text-earth-muted mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">location_on</span> Localisation</p>
                     <p class="text-sm font-semibold text-earth-text">{{ alert.localisationVerger }}</p>
                   </div>
                   <div>
-                    <p class="text-xs uppercase text-earth-muted mb-1">👨‍🌾 Agriculteur</p>
+                    <p class="text-xs uppercase text-earth-muted mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">agriculture</span> Agriculteur</p>
                     <p class="text-sm font-semibold text-earth-text">
                       {{ alert.prenomAgriculteur }} {{ alert.nomAgriculteur }}
                     </p>
                   </div>
                   <div>
-                    <p class="text-xs uppercase text-earth-muted mb-1">🫒 Type d'olive</p>
+                    <p class="text-xs uppercase text-earth-muted mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">eco</span> Type d'olive</p>
                     <p class="text-sm font-semibold text-earth-text">{{ alert.typeOlive }}</p>
                   </div>
                   <div>
-                    <p class="text-xs uppercase text-earth-muted mb-1">⚖️ Rendement estimé</p>
+                    <p class="text-xs uppercase text-earth-muted mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">scale</span> Rendement estimé</p>
                     <p class="text-sm font-semibold text-earth-text">{{ alert.rendementEstime }} kg</p>
                   </div>
                   <div>
-                    <p class="text-xs uppercase text-earth-muted mb-1">🌳 Arbres / Superficie</p>
+                    <p class="text-xs uppercase text-earth-muted mb-1 flex items-center gap-1"><span class="material-symbols-outlined text-sm">park</span> Arbres / Superficie</p>
                     <p class="text-sm font-semibold text-earth-text">
                       {{ alert.nombreArbres }} arbres · {{ alert.superficie }} ha
                     </p>
                   </div>
                 </div>
 
-                <p class="text-xs text-earth-muted mt-2">
-                  🕐 {{ alert.createdAt | date:'dd/MM/yyyy à HH:mm' }}
+                <p class="text-xs text-earth-muted mt-2 flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">schedule</span> {{ alert.createdAt | date:'dd/MM/yyyy à HH:mm' }}
                 </p>
               </div>
             </div>

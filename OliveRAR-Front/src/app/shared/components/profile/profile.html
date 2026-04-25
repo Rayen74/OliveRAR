@@ -77,23 +77,23 @@
         <div *ngIf="!isEditing" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="p-4 rounded-2xl border border-earth-border bg-earth-bg">
             <p class="text-xs uppercase tracking-[0.18em] text-earth-muted mb-2 font-semibold">Prénom</p>
-            <p class="text-base font-semibold text-earth-text">{{ currentUser?.prenom }}</p>
+            <p class="text-base text-earth-text">{{ currentUser?.prenom }}</p>
           </div>
           <div class="p-4 rounded-2xl border border-earth-border bg-earth-bg">
             <p class="text-xs uppercase tracking-[0.18em] text-earth-muted mb-2 font-semibold">Nom</p>
-            <p class="text-base font-semibold text-earth-text">{{ currentUser?.nom }}</p>
+            <p class="text-base text-earth-text">{{ currentUser?.nom }}</p>
           </div>
           <div class="p-4 rounded-2xl border border-earth-border bg-earth-bg">
             <p class="text-xs uppercase tracking-[0.18em] text-earth-muted mb-2 font-semibold">Email</p>
-            <p class="text-base font-semibold text-earth-text break-all">{{ currentUser?.email }}</p>
+            <p class="text-base text-earth-text break-all">{{ currentUser?.email }}</p>
           </div>
           <div class="p-4 rounded-2xl border border-earth-border bg-earth-bg">
             <p class="text-xs uppercase tracking-[0.18em] text-earth-muted mb-2 font-semibold">Téléphone</p>
-            <p class="text-base font-semibold text-earth-text">{{ currentUser?.phoneNumber }}</p>
+            <p class="text-base text-earth-text">{{ currentUser?.phoneNumber }}</p>
           </div>
           <div class="p-4 rounded-2xl border border-earth-border bg-earth-bg opacity-60">
             <p class="text-xs uppercase tracking-[0.18em] text-earth-muted mb-2 font-semibold">Rôle</p>
-            <p class="text-base font-semibold text-earth-text flex items-center gap-2">
+            <p class="text-base text-earth-text flex items-center gap-2">
               {{ formatRole(currentUser?.role) }}
               <span class="material-symbols-outlined text-sm">lock</span>
             </p>

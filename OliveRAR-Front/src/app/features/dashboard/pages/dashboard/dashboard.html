@@ -17,7 +17,10 @@
       </div>
 
       <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
-        <p class="text-sm font-medium uppercase text-earth-muted">Alertes maturité</p>
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium uppercase text-earth-muted">Alertes maturité</p>
+          <span class="material-symbols-outlined text-alert-500 text-xl">notification_important</span>
+        </div>
         <p class="mt-2 text-3xl font-bold text-alert-500">{{ readyVergers }}</p>
         <p class="mt-2 text-xs italic text-earth-muted">Vergers actuellement prêts pour récolte.</p>
       </div>
@@ -35,8 +38,8 @@
       </div>
     </div>
 
-    <section class="mt-10 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)]">
-      <div class="rounded-3xl border border-earth-border bg-white p-5 shadow-sm">
+    <section class="mt-10 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)] items-stretch">
+      <div class="rounded-3xl border border-earth-border bg-white p-5 shadow-sm flex flex-col">
         <div class="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 class="text-xl font-semibold text-earth-text">Carte des vergers</h2>
@@ -49,18 +52,20 @@
           {{ mapError }}
         </div>
 
-        <div *ngIf="loadingVergers" class="flex h-[430px] items-center justify-center text-earth-muted">
+        <div *ngIf="loadingVergers" class="flex flex-1 items-center justify-center text-earth-muted">
           Chargement de la carte...
         </div>
 
-        <app-verger-map *ngIf="!loadingVergers" [markers]="mapMarkers" [interactive]="false"
-          [selectedMarkerId]="selectedVerger?.id || selectedVerger?.nom || null" [mapHeight]="430"
-          emptyMessage="Aucun verger avec coordonnées valides n'est disponible."
-          (markerSelected)="onMarkerSelected($event)">
-        </app-verger-map>
+        <div class="flex-1" *ngIf="!loadingVergers">
+          <app-verger-map [markers]="mapMarkers" [interactive]="false"
+            [selectedMarkerId]="selectedVerger?.id || selectedVerger?.nom || null" [mapHeight]="430"
+            emptyMessage="Aucun verger avec coordonnées valides n'est disponible."
+            (markerSelected)="onMarkerSelected($event)">
+          </app-verger-map>
+        </div>
       </div>
 
-      <aside class="h-fit rounded-3xl border border-earth-border bg-white p-5 shadow-sm">
+      <aside class="rounded-3xl border border-earth-border bg-white p-5 shadow-sm flex flex-col">
         <div class="space-y-4">
           <div>
             <p class="text-xs uppercase tracking-[0.18em] text-earth-muted">Sélection du verger</p>
@@ -117,25 +122,25 @@
 
         <div *ngIf="selectedVerger; else emptySelection" class="mt-4 space-y-3">
           <div
-            class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-2xl border border-earth-border bg-earth-bg px-4 py-3 text-sm">
+            class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-x-3 gap-y-2 rounded-2xl border border-earth-border bg-earth-bg px-4 py-3 text-sm">
             <span class="text-earth-muted">Localisation</span>
-            <span class="text-right font-medium text-earth-text">{{ selectedVerger.localisation || 'Non renseignée'
+            <span class="text-right text-earth-text truncate" title="{{ selectedVerger.localisation }}">{{ selectedVerger.localisation || 'Non renseignée'
               }}</span>
 
             <span class="text-earth-muted">Arbres</span>
-            <span class="text-right font-semibold text-earth-text">{{ selectedVerger.nombreArbres }}</span>
+            <span class="text-right text-earth-text truncate">{{ selectedVerger.nombreArbres }}</span>
 
             <span class="text-earth-muted">Superficie</span>
-            <span class="text-right font-semibold text-earth-text">{{ selectedVerger.superficie }} ha</span>
+            <span class="text-right text-earth-text truncate">{{ selectedVerger.superficie }} ha</span>
 
             <span class="text-earth-muted">Type d'olive</span>
-            <span class="text-right font-semibold text-earth-text">{{ selectedVerger.typeOlive || 'N/A' }}</span>
+            <span class="text-right text-earth-text truncate">{{ selectedVerger.typeOlive || 'N/A' }}</span>
 
             <span class="text-earth-muted">Rendement</span>
-            <span class="text-right font-semibold text-earth-text">{{ selectedVerger.rendementEstime }} kg</span>
+            <span class="text-right text-earth-text truncate">{{ selectedVerger.rendementEstime }} kg</span>
 
             <span class="text-earth-muted">Coordonnées</span>
-            <span class="text-right font-medium text-earth-text">{{ selectedVerger.latitude }} / {{
+            <span class="text-right text-earth-text truncate" title="{{ selectedVerger.latitude }} / {{ selectedVerger.longitude }}">{{ selectedVerger.latitude }} / {{
               selectedVerger.longitude }}</span>
           </div>
         </div>

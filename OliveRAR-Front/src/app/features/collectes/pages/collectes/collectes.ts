@@ -145,7 +145,6 @@ export class CollectesComponent implements OnInit, OnDestroy {
     this.selectedOuvrierIds.clear();
     this.collecteForm.reset();
     this.showForm = true;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   startEdit(c: Collecte): void {
@@ -159,7 +158,6 @@ export class CollectesComponent implements OnInit, OnDestroy {
       statut: c.statut,
     });
     this.showForm = true;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   cancelForm(): void {

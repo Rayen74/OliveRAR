@@ -247,7 +247,6 @@ export class UsersComponent implements OnInit {
       password: '',
       role: user.role
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   openCreateForm(): void {
