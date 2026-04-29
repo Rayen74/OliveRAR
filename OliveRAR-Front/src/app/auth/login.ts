@@ -144,7 +144,7 @@ export class LoginComponent {
               break;
 
             case Role.RESPONSABLE_LOGISTIQUE:
-              redirectPath = '/responsable-logistique/equipements';
+              redirectPath = '/responsable-logistique/types-ressources';
               break;
 
             case Role.RESPONSABLE_CHEF_RECOLTE:

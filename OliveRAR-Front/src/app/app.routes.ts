@@ -88,19 +88,28 @@ export const routes: Routes = [
     path: 'responsable-logistique',
     canActivate: [authGuard, responsableLogistiqueGuard],
     children: [
+
       {
-        path: 'equipements',
-        loadComponent: () => import('./features/ressources/pages/equipements/equipements').then((m) => m.EquipementsComponent)
+        path: 'types-ressources',
+        loadComponent: () => import('./features/ressources/pages/types-ressources/types-ressources').then((m) => m.TypesRessourcesComponent)
       },
       {
-        path: 'ressources',
-        loadComponent: () => import('./features/ressources/pages/equipements/equipements').then((m) => m.EquipementsComponent)
+        path: 'unites',
+        loadComponent: () => import('./features/ressources/pages/unites-ressources/unites-ressources').then((m) => m.UnitesRessourcesComponent)
+      },
+      {
+        path: 'collectes',
+        loadComponent: () => import('./features/collectes/pages/collectes/collectes').then((m) => m.CollectesComponent)
+      },
+      {
+        path: 'tournees',
+        loadComponent: () => import('./features/tournees/pages/tournees/tournees').then((m) => m.TourneesPageComponent)
       },
       {
         path: 'profile',
         loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
       },
-      { path: '', redirectTo: 'ressources', pathMatch: 'full' },
+      { path: '', redirectTo: 'types-ressources', pathMatch: 'full' },
     ]
   },
   {

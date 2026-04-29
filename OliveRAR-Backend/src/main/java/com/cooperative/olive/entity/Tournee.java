@@ -21,17 +21,19 @@ public class Tournee {
     @Id
     private String id;
 
-    @NotEmpty(message = "Une tournée doit contenir au moins deux collectes.")
+    @NotBlank(message = "Le nom de la tournee est obligatoire.")
+    private String name;
+
+    @NotEmpty(message = "Une tournee doit contenir au moins deux collectes.")
     private List<String> collecteIds = new ArrayList<>();
 
-    private String vehicleId;
-    private String driverId;
-    private List<String> agentIds = new ArrayList<>();
-    private List<String> materialIds = new ArrayList<>();
-
     private LocalDate datePrevue;
+    private LocalDateTime plannedStartTime;
+    private LocalDateTime plannedEndTime;
+    private Boolean optimizationEnabled;
+    private List<ResourceAssignment> resourceAssignments = new ArrayList<>();
 
-    @NotBlank(message = "Le statut de la tournée est obligatoire.")
+    @NotBlank(message = "Le statut de la tournee est obligatoire.")
     private String status = "PLANIFIEE";
 
     private String createdBy;

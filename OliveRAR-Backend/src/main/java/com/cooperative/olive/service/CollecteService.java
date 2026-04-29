@@ -5,6 +5,7 @@ import com.cooperative.olive.dao.CollecteRepository;
 import com.cooperative.olive.dao.UserRepository;
 import com.cooperative.olive.dao.VergerRepository;
 import com.cooperative.olive.entity.Collecte;
+import com.cooperative.olive.entity.ResourceAssignment;
 import com.cooperative.olive.entity.Role;
 import com.cooperative.olive.entity.User;
 import com.cooperative.olive.entity.Verger;
@@ -39,6 +40,7 @@ public class CollecteService {
     private final VergerRepository vergerRepository;
     private final MongoTemplate mongoTemplate;
     private final CurrentUserService currentUserService;
+    private final ResourceAllocationService resourceAllocationService;
 
     public PaginatedResponse<Map<String, Object>> getAllPaginated(int page, int size, String chefRecolteId, String statut) {
         currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_CHEF_RECOLTE);
@@ -55,16 +57,11 @@ public class CollecteService {
         }
 
         long totalElements = mongoTemplate.count(query, Collecte.class);
-        int totalPages = (int) Math.ceil((double) totalElements / safeSize);
-        if (totalPages == 0) {
-            totalPages = 1;
-        }
-
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / safeSize));
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "datePrevue"));
         query.with(pageable);
 
-        List<Collecte> collectes = mongoTemplate.find(query, Collecte.class);
-        List<Map<String, Object>> enriched = collectes.stream()
+        List<Map<String, Object>> enriched = mongoTemplate.find(query, Collecte.class).stream()
                 .map(this::enrichCollecte)
                 .collect(Collectors.toList());
 
@@ -83,6 +80,7 @@ public class CollecteService {
         return collecteRepository.findAll().stream().map(c -> {
             Map<String, Object> item = new HashMap<>();
             item.put("id", c.getId());
+            item.put("name", c.getName());
             item.put("datePrevue", c.getDatePrevue() != null ? c.getDatePrevue().toString() : null);
             item.put("statut", c.getStatut());
             item.put("vergerNom", resolveVergerNom(c.getVergerId()));
@@ -93,17 +91,23 @@ public class CollecteService {
     }
 
     public Collecte create(Collecte collecte) {
-        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE);
-        collecte.setEquipeIds(new ArrayList<>());
-        collecte.setStatut("PLANIFIEE");
+        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE);
+        collecte.setEquipeIds(collecte.getEquipeIds() == null ? new ArrayList<>() : collecte.getEquipeIds());
+        collecte.setStatut(collecte.getStatut() == null || collecte.getStatut().isBlank() ? "PLANIFIEE" : collecte.getStatut().trim().toUpperCase());
 
         if (collecte.getVergerId() != null && !collecte.getVergerId().isBlank()
                 && collecteRepository.existsByVergerId(collecte.getVergerId())) {
-            throw new BusinessException("Une collecte existe déjà pour ce verger.");
+            throw new BusinessException("Une collecte existe deja pour ce verger.");
         }
 
         validateCollecte(collecte);
+        List<ResourceAssignment> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
+                collecte.getResourceAssignments(), List.of(), "COLLECTE", null
+        );
+        resourceAllocationService.applyResourceQuantityUpdate(List.of(), normalizedAssignments);
+
         collecte.setId(null);
+        collecte.setResourceAssignments(normalizedAssignments);
         collecte.setCreatedBy(currentUserService.getRequiredCurrentUser().getId());
         collecte.setCreatedAt(LocalDateTime.now());
         collecte.setUpdatedAt(LocalDateTime.now());
@@ -117,40 +121,49 @@ public class CollecteService {
 
         if (updated.getVergerId() != null && !updated.getVergerId().isBlank()
                 && collecteRepository.existsByVergerIdAndIdNot(updated.getVergerId(), id)) {
-            throw new BusinessException("Une collecte existe déjà pour ce verger.");
+            throw new BusinessException("Une collecte existe deja pour ce verger.");
         }
 
         validateCollecte(updated);
+        List<ResourceAssignment> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
+                updated.getResourceAssignments(), existing.getResourceAssignments(), "COLLECTE", id
+        );
+        resourceAllocationService.applyResourceQuantityUpdate(existing.getResourceAssignments(), normalizedAssignments);
 
+        existing.setName(updated.getName().trim());
         existing.setVergerId(updated.getVergerId());
         existing.setDatePrevue(updated.getDatePrevue());
         existing.setResponsableAffectationId(updated.getResponsableAffectationId());
         existing.setChefRecolteId(updated.getChefRecolteId());
         existing.setEquipeIds(updated.getEquipeIds() != null ? updated.getEquipeIds() : new ArrayList<>());
-        existing.setStatut(updated.getStatut());
+        existing.setStatut(updated.getStatut().trim().toUpperCase());
+        existing.setResourceAssignments(normalizedAssignments);
         existing.setUpdatedAt(LocalDateTime.now());
         return collecteRepository.save(existing);
     }
 
     public void delete(String id) {
-        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE);
-        if (!collecteRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Collecte introuvable.");
-        }
-        collecteRepository.deleteById(id);
+        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE);
+        Collecte collecte = collecteRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Collecte introuvable."));
+        resourceAllocationService.applyResourceQuantityUpdate(collecte.getResourceAssignments(), List.of());
+        collecteRepository.delete(collecte);
     }
 
     private void validateCollecte(Collecte collecte) {
+        if (collecte.getName() == null || collecte.getName().isBlank()) {
+            throw new BusinessException("Le nom de la collecte est obligatoire.");
+        }
         if (collecte.getVergerId() == null || collecte.getVergerId().isBlank()) {
             throw new BusinessException("Le verger est obligatoire.");
         }
         if (collecte.getDatePrevue() == null) {
-            throw new BusinessException("La date prévue est obligatoire.");
+            throw new BusinessException("La date prevue est obligatoire.");
         }
         if (collecte.getChefRecolteId() == null || collecte.getChefRecolteId().isBlank()) {
-            throw new BusinessException("Le chef de récolte est obligatoire.");
+            throw new BusinessException("Le chef de recolte est obligatoire.");
         }
-        if (collecte.getStatut() == null || !ALLOWED_STATUTS.contains(collecte.getStatut())) {
+        if (collecte.getStatut() == null || !ALLOWED_STATUTS.contains(collecte.getStatut().trim().toUpperCase())) {
             throw new BusinessException("Statut de collecte invalide.");
         }
 
@@ -161,16 +174,16 @@ public class CollecteService {
         }
 
         User chefRecolte = userRepository.findById(collecte.getChefRecolteId())
-                .orElseThrow(() -> new ResourceNotFoundException("Chef de récolte introuvable."));
+                .orElseThrow(() -> new ResourceNotFoundException("Chef de recolte introuvable."));
         if (chefRecolte.getRole() != Role.RESPONSABLE_CHEF_RECOLTE) {
-            throw new BusinessException("Le chef de récolte doit avoir le rôle RESPONSABLE_CHEF_RECOLTE.");
+            throw new BusinessException("Le chef de recolte doit avoir le role RESPONSABLE_CHEF_RECOLTE.");
         }
 
         if (collecte.getResponsableAffectationId() != null && !collecte.getResponsableAffectationId().isBlank()) {
-            User responsible = userRepository.findById(collecte.getResponsableAffectationId())
+            User responsable = userRepository.findById(collecte.getResponsableAffectationId())
                     .orElseThrow(() -> new ResourceNotFoundException("Responsable d'affectation introuvable."));
-            if (responsible.getRole() != Role.RESPONSABLE_LOGISTIQUE) {
-                throw new BusinessException("Le responsable d'affectation doit avoir le rôle RESPONSABLE_LOGISTIQUE.");
+            if (responsable.getRole() != Role.RESPONSABLE_LOGISTIQUE) {
+                throw new BusinessException("Le responsable d'affectation doit avoir le role RESPONSABLE_LOGISTIQUE.");
             }
         }
 
@@ -179,7 +192,17 @@ public class CollecteService {
                 User ouvrier = userRepository.findById(ouvrierId)
                         .orElseThrow(() -> new ResourceNotFoundException("Ouvrier introuvable: " + ouvrierId));
                 if (ouvrier.getRole() != Role.OUVRIER) {
-                    throw new BusinessException("Tous les membres de l'équipe doivent avoir le rôle OUVRIER.");
+                    throw new BusinessException("Tous les membres de l'equipe doivent avoir le role OUVRIER.");
+                }
+
+                // Check if worker is already assigned to another collecte on the same day
+                boolean isBusy = collecteRepository.findAll().stream()
+                        .filter(c -> collecte.getId() == null || !c.getId().equals(collecte.getId()))
+                        .filter(c -> c.getDatePrevue().equals(collecte.getDatePrevue()))
+                        .anyMatch(c -> c.getEquipeIds() != null && c.getEquipeIds().contains(ouvrierId));
+
+                if (isBusy) {
+                    throw new BusinessException("L'ouvrier " + ouvrier.getPrenom() + " " + ouvrier.getNom() + " est deja affecté à une autre collecte pour la date du " + collecte.getDatePrevue() + ".");
                 }
             }
         }
@@ -187,9 +210,14 @@ public class CollecteService {
 
     private Map<String, Object> enrichCollecte(Collecte collecte) {
         Map<String, Object> map = new HashMap<>();
+        Verger verger = vergerRepository.findById(collecte.getVergerId()).orElse(null);
         map.put("id", collecte.getId());
+        map.put("name", collecte.getName());
         map.put("vergerId", collecte.getVergerId());
         map.put("vergerNom", resolveVergerNom(collecte.getVergerId()));
+        map.put("localisation", verger != null ? verger.getLocalisation() : "");
+        map.put("latitude", verger != null ? verger.getLatitude() : null);
+        map.put("longitude", verger != null ? verger.getLongitude() : null);
         map.put("datePrevue", collecte.getDatePrevue() != null ? collecte.getDatePrevue().toString() : null);
         map.put("statut", collecte.getStatut());
         map.put("createdBy", collecte.getCreatedBy());
@@ -200,6 +228,7 @@ public class CollecteService {
         map.put("responsableAffectationId", collecte.getResponsableAffectationId());
         map.put("responsableAffectationNom", resolveUserFullName(collecte.getResponsableAffectationId()));
         map.put("equipeIds", collecte.getEquipeIds());
+        map.put("resourceAssignments", resourceAllocationService.enrichAssignments(collecte.getResourceAssignments()));
 
         List<Map<String, String>> equipe = new ArrayList<>();
         if (collecte.getEquipeIds() != null) {
@@ -220,7 +249,6 @@ public class CollecteService {
         if (userId == null || userId.isBlank()) {
             return "";
         }
-
         return userRepository.findById(userId)
                 .map(user -> user.getPrenom() + " " + user.getNom())
                 .orElse("");
@@ -230,7 +258,6 @@ public class CollecteService {
         if (vergerId == null || vergerId.isBlank()) {
             return "";
         }
-
         return vergerRepository.findById(vergerId)
                 .map(Verger::getNom)
                 .orElse("");

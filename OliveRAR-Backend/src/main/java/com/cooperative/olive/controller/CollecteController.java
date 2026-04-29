@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -35,12 +36,12 @@ public class CollecteController {
     }
 
     @GetMapping("/calendar")
-    public ApiResponse<Object> getCalendar() {
+    public ApiResponse<List<Map<String, Object>>> getCalendar() {
         return ApiResponse.success("Calendrier des collectes récupéré avec succès.", collecteService.getAllForCalendar());
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<Object> getById(@PathVariable String id) {
+    public ApiResponse<Map<String, Object>> getById(@PathVariable String id) {
         return ApiResponse.success("Collecte récupérée avec succès.", collecteService.getById(id));
     }
 

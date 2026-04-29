@@ -10,9 +10,13 @@ import {
   DropdownUser,
   DropdownVerger,
   PaginatedCollecteResponse,
+  ResourceAssignment
 } from '../../services/collecte-api.service';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Unite } from '../../../ressources/models/logistique.model';
+import { UniteApiService } from '../../../ressources/services/unite-api.service';
+import { AuthService, Role } from '../../../../auth/auth.service';
 
 @Component({
   selector: 'app-collectes',
@@ -35,6 +39,10 @@ export class CollectesComponent implements OnInit, OnDestroy {
   totalPages = 1;
   totalItems = 0;
 
+  get isResponsableLogistique(): boolean {
+    return this.authService.getConnectedUser()?.role === Role.RESPONSABLE_LOGISTIQUE;
+  }
+
   filterChefId = '';
   filterStatut = '';
 
@@ -51,22 +59,37 @@ export class CollectesComponent implements OnInit, OnDestroy {
   chefsRecolte: DropdownUser[] = [];
   responsablesAffectation: DropdownUser[] = [];
   ouvriers: DropdownUser[] = [];
+  unites: Unite[] = [];
   selectedOuvrierIds: Set<string> = new Set();
+  currentAssignments: ResourceAssignment[] = [];
 
   readonly statuts = ['PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE'];
+  readonly assignmentStatuses = ['PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE'];
 
   collecteForm: FormGroup;
+  assignmentForm: FormGroup;
 
   constructor(
     private fb: FormBuilder,
     private collecteApi: CollecteApiService,
+    private uniteApi: UniteApiService,
     private cdr: ChangeDetectorRef,
+    private authService: AuthService
   ) {
     this.collecteForm = this.fb.group({
+      name: [''],
       vergerId: [''],
       datePrevue: ['', this.futureDateValidator],
       chefRecolteId: [''],
       responsableAffectationId: [''],
+      statut: ['PLANIFIEE']
+    });
+
+    this.assignmentForm = this.fb.group({
+      uniteId: [''],
+      startTime: [''],
+      endTime: [''],
+      status: ['PLANIFIEE']
     });
   }
 
@@ -126,36 +149,69 @@ export class CollectesComponent implements OnInit, OnDestroy {
   private loadDropdowns(): void {
     this.collecteApi.getReadyVergers().pipe(take(1)).subscribe({
       next: (v) => (this.readyVergers = v),
-      error: () => { },
+      error: () => {},
     });
 
     this.collecteApi.getUsersByRole('RESPONSABLE_CHEF_RECOLTE').pipe(take(1)).subscribe({
       next: (res) => (this.chefsRecolte = res.users ?? []),
-      error: () => { },
+      error: () => {},
     });
 
     this.collecteApi.getUsersByRole('RESPONSABLE_LOGISTIQUE').pipe(take(1)).subscribe({
       next: (res) => (this.responsablesAffectation = res.users ?? []),
-      error: () => { },
+      error: () => {},
+    });
+
+    this.collecteApi.getUsersByRole('OUVRIER').pipe(take(1)).subscribe({
+      next: (res) => (this.ouvriers = res.users ?? []),
+      error: () => {},
+    });
+
+    this.uniteApi.getDisponibles().pipe(take(1)).subscribe({
+      next: (res) => (this.unites = res.data ?? []),
+      error: () => {},
     });
   }
 
   openCreateForm(): void {
     this.editingId = null;
+    this.editingId = null;
     this.selectedOuvrierIds.clear();
-    this.collecteForm.reset();
+    this.currentAssignments = [];
+    this.collecteForm.reset({
+      name: '',
+      vergerId: '',
+      datePrevue: '',
+      chefRecolteId: '',
+      responsableAffectationId: '',
+      statut: 'PLANIFIEE'
+    });
+    this.assignmentForm.reset({
+      uniteId: '',
+      startTime: '',
+      endTime: '',
+      status: 'PLANIFIEE'
+    });
     this.showForm = true;
   }
 
   startEdit(c: Collecte): void {
     this.editingId = c.id ?? null;
     this.selectedOuvrierIds = new Set(c.equipeIds ?? []);
+    this.currentAssignments = [...(c.resourceAssignments ?? [])];
     this.collecteForm.patchValue({
+      name: c.name,
       vergerId: c.vergerId,
       datePrevue: c.datePrevue,
       chefRecolteId: c.chefRecolteId,
       responsableAffectationId: c.responsableAffectationId ?? '',
       statut: c.statut,
+    });
+    this.assignmentForm.reset({
+      uniteId: '',
+      startTime: '',
+      endTime: '',
+      status: 'PLANIFIEE'
     });
     this.showForm = true;
   }
@@ -164,6 +220,7 @@ export class CollectesComponent implements OnInit, OnDestroy {
     this.showForm = false;
     this.editingId = null;
     this.selectedOuvrierIds.clear();
+    this.currentAssignments = [];
     this.collecteForm.reset();
   }
 
@@ -179,9 +236,51 @@ export class CollectesComponent implements OnInit, OnDestroy {
     return this.selectedOuvrierIds.has(id);
   }
 
+  addAssignment(): void {
+    const raw = this.assignmentForm.getRawValue();
+    if (!raw.uniteId) {
+      this.showToast('Choisissez une unité.', 'error');
+      return;
+    }
+    if (!raw.startTime || !raw.endTime) {
+      this.showToast('Le créneau horaire est obligatoire.', 'error');
+      return;
+    }
+    if (new Date(raw.endTime) <= new Date(raw.startTime)) {
+      this.showToast('La date de fin doit être après la date de début.', 'error');
+      return;
+    }
+
+    this.currentAssignments = [
+      ...this.currentAssignments,
+      {
+        uniteId: raw.uniteId,
+        startTime: new Date(raw.startTime).toISOString(),
+        endTime: new Date(raw.endTime).toISOString(),
+        status: raw.status
+      }
+    ];
+
+    this.assignmentForm.reset({
+      uniteId: '',
+      startTime: '',
+      endTime: '',
+      status: 'PLANIFIEE'
+    });
+  }
+
+  removeAssignment(index: number): void {
+    this.currentAssignments.splice(index, 1);
+    this.currentAssignments = [...this.currentAssignments];
+  }
+
   submitForm(): void {
     const raw = this.collecteForm.getRawValue();
 
+    if (!raw.name?.trim()) {
+      this.showToast('Le nom de la collecte est obligatoire.', 'error');
+      return;
+    }
     if (!raw.vergerId) {
       this.showToast('Le verger est obligatoire.', 'error');
       return;
@@ -197,7 +296,9 @@ export class CollectesComponent implements OnInit, OnDestroy {
 
     const payload: Collecte = {
       ...raw,
-      equipeIds: this.editingId ? Array.from(this.selectedOuvrierIds) : [],
+      name: raw.name.trim(),
+      equipeIds: Array.from(this.selectedOuvrierIds),
+      resourceAssignments: this.currentAssignments
     };
 
     this.isSubmitting = true;
@@ -280,6 +381,17 @@ export class CollectesComponent implements OnInit, OnDestroy {
 
   userLabel(u: DropdownUser): string {
     return `${u.prenom} ${u.nom}`;
+  }
+
+  resourceLabel(uniteId: string): string {
+    const unite = this.unites.find((item) => item.id === uniteId);
+    return unite ? `${unite.codeUnique}` : uniteId;
+  }
+
+  selectedVergerLocation(): string {
+    const vergerId = this.collecteForm.get('vergerId')?.value;
+    const verger = this.readyVergers.find((item) => item.id === vergerId);
+    return verger?.localisation ?? '';
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {

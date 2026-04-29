@@ -8,7 +8,8 @@ import {
   CollecteMutationResponse,
   DropdownUser,
   DropdownVerger,
-  PaginatedCollecteResponse
+  PaginatedCollecteResponse,
+  ResourceAssignment
 } from '../models/collecte.model';
 
 export type {
@@ -17,7 +18,8 @@ export type {
   CollecteMutationResponse,
   DropdownUser,
   DropdownVerger,
-  PaginatedCollecteResponse
+  PaginatedCollecteResponse,
+  ResourceAssignment
 } from '../models/collecte.model';
 
 @Injectable({ providedIn: 'root' })
@@ -67,5 +69,9 @@ export class CollecteApiService {
       params = params.set('disponibilite', disponibilite);
     }
     return this.http.get<{ success: boolean; users: DropdownUser[] }>(`${this.base}/users/by-role`, { params });
+  }
+
+  updateResourceAssignments(id: string, payload: Collecte): Observable<CollecteMutationResponse> {
+    return this.http.put<CollecteMutationResponse>(`${this.base}/collectes/${id}`, payload);
   }
 }

@@ -1,0 +1,250 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+  <!-- Toast -->
+  <div *ngIf="toast.show"
+    class="fixed top-6 right-6 z-[9999] flex items-center gap-2 rounded-xl border px-4 py-3 shadow-xl transition-all"
+    [style.background-color]="toast.type === 'success' ? '#f0fdf4' : '#fef2f2'"
+    [style.border-color]="toast.type === 'success' ? '#86efac' : '#fca5a5'"
+    [style.color]="toast.type === 'success' ? '#166534' : '#991b1b'">
+    <span class="material-symbols-outlined text-base">{{ toast.type === 'success' ? 'check_circle' : 'error' }}</span>
+    <span class="text-sm font-medium">{{ toast.message }}</span>
+  </div>
+
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8" *ngIf="typesData$ | async as data">
+    <!-- Header -->
+    <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Types de ressources</h1>
+        <p class="text-sm text-earth-muted mt-1">Catalogue des types de ressources logistiques (matériel, équipement…).</p>
+      </div>
+      <button type="button" (click)="openCreateForm()"
+        class="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-olive-600 px-4 py-2.5 text-white shadow-sm transition-colors hover:bg-olive-700">
+        <span class="material-symbols-outlined text-base">add_circle</span>
+        Nouveau type
+      </button>
+    </header>
+
+    <!-- Filters -->
+    <form [formGroup]="filterForm" class="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-earth-border bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-2 text-sm font-medium text-earth-text">
+        <span class="material-symbols-outlined text-earth-muted">filter_list</span> Filtrer :
+      </div>
+      <input type="text" formControlName="search" (input)="onFilterChange()" placeholder="Nom du type…"
+        class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
+      <select formControlName="categorie" (change)="onFilterChange()"
+        class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
+        <option value="">Toutes catégories</option>
+        <option *ngFor="let c of categories" [value]="c.value">{{ c.libelle }}</option>
+      </select>
+      <select formControlName="sousCategorie" (change)="onFilterChange()"
+        class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
+        <option value="">Toutes sous-catégories</option>
+        <option *ngFor="let sc of sousCategories" [value]="sc">{{ sc }}</option>
+      </select>
+      <select formControlName="actif" (change)="onFilterChange()"
+        class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
+        <option value="">Tous les états</option>
+        <option value="true">Actifs seulement</option>
+        <option value="false">Inactifs seulement</option>
+      </select>
+    </form>
+
+    <div *ngIf="error" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
+    <div *ngIf="isLoading" class="my-4 flex items-center gap-2 text-sm text-earth-muted">
+      <div class="h-4 w-4 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+      Chargement…
+    </div>
+
+    <!-- Cards -->
+    <div *ngIf="!isLoading" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div *ngFor="let type of data.items"
+        class="group rounded-xl border border-earth-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+        <!-- Top row -->
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                [ngClass]="categorieClass(type.categorie)">
+                {{ categorieLabel(type.categorie) }}
+              </span>
+              <span *ngIf="!type.actif"
+                class="inline-flex items-center rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                Inactif
+              </span>
+            </div>
+            <p class="font-semibold text-earth-text truncate">{{ type.nom }}</p>
+            <p *ngIf="type.sousCategorie" class="text-xs text-earth-muted mt-0.5">{{ type.sousCategorie }}</p>
+          </div>
+          <div class="flex gap-1.5">
+            <button (click)="startEdit(type)"
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-olive-50 text-olive-700 transition-colors hover:bg-olive-100" title="Modifier">
+              <span class="material-symbols-outlined text-sm">edit</span>
+            </button>
+            <button *ngIf="type.actif" (click)="openDesactiverModal(type)"
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 transition-colors hover:bg-amber-100" title="Désactiver">
+              <span class="material-symbols-outlined text-sm">block</span>
+            </button>
+            <button (click)="openDeleteModal(type)"
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100" title="Supprimer">
+              <span class="material-symbols-outlined text-sm">delete</span>
+            </button>
+          </div>
+        </div>
+        <!-- Description -->
+        <p *ngIf="type.description" class="text-sm text-earth-muted line-clamp-2 mb-3">{{ type.description }}</p>
+        <!-- Capacité -->
+        <div *ngIf="type.capacite?.valeur != null" class="flex items-center gap-1.5 text-sm text-earth-muted">
+          <span class="material-symbols-outlined text-base text-olive-600">scale</span>
+          Capacité : <span class="font-medium text-earth-text">{{ type.capacite!.valeur }} {{ type.capacite!.unite }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="data.items.length === 0"
+        class="col-span-full rounded-xl border-2 border-dashed border-earth-border py-12 text-center text-earth-muted">
+        Aucun type ne correspond aux filtres.
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="!isLoading && data.items.length > 0"
+      class="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <p class="text-sm text-earth-muted">
+        Page <span class="font-medium text-earth-text">{{ currentPage + 1 }}</span> sur {{ totalPages }} – {{ totalElements }} au total
+      </p>
+      <div class="flex items-center gap-2">
+        <button (click)="previousPage()" [disabled]="currentPage === 0"
+          class="inline-flex items-center gap-1 rounded-lg border border-earth-border bg-white px-4 py-2 transition-colors hover:bg-gray-50 disabled:opacity-50">
+          <span class="material-symbols-outlined text-base">chevron_left</span> Précédent
+        </button>
+        <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1"
+          class="inline-flex items-center gap-1 rounded-lg border border-earth-border bg-white px-4 py-2 transition-colors hover:bg-gray-50 disabled:opacity-50">
+          Suivant <span class="material-symbols-outlined text-base">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: Désactiver -->
+  <div *ngIf="isDesactiverModalOpen" class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-xl border border-earth-border bg-white p-6 shadow-2xl">
+      <div class="mb-4 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+          <span class="material-symbols-outlined">block</span>
+        </div>
+        <h3 class="text-lg font-bold">Désactiver le type</h3>
+      </div>
+      <p class="mb-6 text-sm leading-relaxed text-earth-muted">
+        Désactiver <span class="font-bold text-earth-text">{{ targetType?.nom }}</span> ? Les unités existantes ne seront pas supprimées.
+      </p>
+      <div class="flex justify-end gap-3">
+        <button (click)="cancelDesactiver()" class="rounded-lg border border-earth-border px-4 py-2 transition-colors hover:bg-gray-50">Annuler</button>
+        <button (click)="confirmDesactiver()" class="rounded-lg bg-amber-500 px-4 py-2 text-white shadow-sm transition-colors hover:bg-amber-600">Désactiver</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Supprimer -->
+  <div *ngIf="isDeleteModalOpen" class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-xl border border-earth-border bg-white p-6 shadow-2xl">
+      <div class="mb-4 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+          <span class="material-symbols-outlined">warning</span>
+        </div>
+        <h3 class="text-lg font-bold">Confirmer la suppression</h3>
+      </div>
+      <p class="mb-6 text-sm leading-relaxed text-earth-muted">
+        Supprimer définitivement <span class="font-bold text-earth-text">{{ targetType?.nom }}</span> ?
+        Cette action est irréversible. Impossible si des unités y sont rattachées.
+      </p>
+      <div class="flex justify-end gap-3">
+        <button (click)="cancelDelete()" class="rounded-lg border border-earth-border px-4 py-2 transition-colors hover:bg-gray-50">Annuler</button>
+        <button (click)="confirmDelete()" class="rounded-lg bg-red-600 px-4 py-2 text-white shadow-sm transition-colors hover:bg-red-700">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Formulaire -->
+  <div *ngIf="showForm" class="fixed inset-0 z-[9998] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm">
+    <div class="my-auto w-full max-w-2xl rounded-xl border border-earth-border bg-white p-6 shadow-2xl">
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-earth-text">
+            {{ editingId ? 'Modifier le type' : 'Nouveau type de ressource' }}
+          </h2>
+          <p class="text-sm text-earth-muted mt-1">Définissez la catégorie, la sous-catégorie et la capacité nominale.</p>
+        </div>
+        <button (click)="cancelForm()" class="flex h-8 w-8 items-center justify-center rounded-lg text-earth-muted transition-colors hover:bg-earth-bg hover:text-earth-text">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+
+      <form [formGroup]="typeForm" (ngSubmit)="submitForm()" class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <!-- Nom -->
+        <div class="xl:col-span-2">
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">Nom *</label>
+          <input formControlName="nom" placeholder="Ex : Camion SCANIA 25T"
+            class="w-full rounded-lg border border-earth-border px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+        </div>
+
+        <!-- Catégorie -->
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">Catégorie *</label>
+          <select formControlName="categorie"
+            class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+            <option *ngFor="let c of categories" [value]="c.value">{{ c.libelle }}</option>
+          </select>
+        </div>
+
+        <!-- Sous-catégorie -->
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">Sous-catégorie</label>
+          <select formControlName="sousCategorie"
+            class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+            <option value="">-- Aucune --</option>
+            <option *ngFor="let sc of sousCategories" [value]="sc">{{ sc }}</option>
+          </select>
+        </div>
+
+        <!-- Description -->
+        <div class="xl:col-span-2">
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">Description</label>
+          <textarea formControlName="description" rows="2" placeholder="Description facultative…"
+            class="w-full rounded-lg border border-earth-border px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500 resize-none"></textarea>
+        </div>
+
+        <!-- Capacité -->
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">Valeur de capacité</label>
+          <input type="number" min="0" step="0.1" formControlName="capaciteValeur" placeholder="Ex : 25"
+            class="w-full rounded-lg border border-earth-border px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+        </div>
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">Unité de capacité</label>
+          <input formControlName="capaciteUnite" placeholder="tonnes, m³, unité…"
+            class="w-full rounded-lg border border-earth-border px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+        </div>
+
+        <!-- Actif -->
+        <div class="xl:col-span-2 flex items-center gap-3">
+          <input type="checkbox" id="actif-check" formControlName="actif"
+            class="h-4 w-4 rounded border-earth-border text-olive-600 focus:ring-olive-500">
+          <label for="actif-check" class="text-sm font-medium text-earth-text">Type actif</label>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-2 flex flex-col gap-3 pt-4 border-t border-earth-border sm:flex-row justify-end xl:col-span-2">
+          <button type="button" (click)="cancelForm()"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-earth-border bg-white px-4 py-2 text-earth-text transition-colors hover:bg-gray-50">
+            Annuler
+          </button>
+          <button type="submit" [disabled]="isSubmitting"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-olive-600 px-4 py-2 text-white transition-colors hover:bg-olive-700 disabled:opacity-50">
+            <span class="material-symbols-outlined text-base">{{ editingId ? 'save' : 'add_circle' }}</span>
+            {{ editingId ? 'Enregistrer' : 'Créer le type' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

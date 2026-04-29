@@ -1,7 +1,13 @@
+import { Unite } from '../../ressources/models/logistique.model';
+
 export interface Collecte {
   id?: string;
+  name: string;
   vergerId: string;
   vergerNom?: string;
+  localisation?: string;
+  latitude?: number;
+  longitude?: number;
   datePrevue: string;
   chefRecolteId: string;
   chefRecolteNom?: string;
@@ -10,9 +16,26 @@ export interface Collecte {
   equipeIds: string[];
   equipe?: { id: string; nom: string }[];
   statut: string;
+  resourceAssignments?: ResourceAssignment[];
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ResourceAssignment {
+  uniteId: string;
+  unite?: Unite;
+  startTime: string;
+  endTime: string;
+  status: string;
+  resource?: {
+    id: string;
+    name: string;
+    type: string;
+    quantity: number;
+    status: string;
+    photoUrl?: string | null;
+  };
 }
 
 export interface CollecteCalendarItem {

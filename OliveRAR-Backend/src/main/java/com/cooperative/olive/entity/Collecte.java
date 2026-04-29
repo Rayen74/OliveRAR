@@ -23,6 +23,9 @@ public class Collecte {
     @Id
     private String id;
 
+    @NotBlank(message = "Le nom de la collecte est obligatoire.")
+    private String name;
+
     /** ID of the Verger (must have statut = PRET_POUR_RECOLTE) */
     @NotBlank(message = "Le verger est obligatoire.")
     private String vergerId;
@@ -45,6 +48,8 @@ public class Collecte {
     /** Statut: PLANIFIEE | EN_COURS | TERMINEE | ANNULEE */
     @NotBlank(message = "Le statut de la collecte est obligatoire.")
     private String statut = "PLANIFIEE";
+
+    private List<ResourceAssignment> resourceAssignments = new ArrayList<>();
 
     /** ID of the RESPONSABLE_COOPERATIVE who created this collecte */
     private String createdBy;
