@@ -30,9 +30,10 @@ public class CollecteController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size,
             @RequestParam(required = false) String chefRecolteId,
-            @RequestParam(required = false) String statut
+            @RequestParam(required = false) String statut,
+            @RequestParam(required = false) Boolean hasResources
     ) {
-        return collecteService.getAllPaginated(page, size, chefRecolteId, statut);
+        return collecteService.getAllPaginated(page, size, chefRecolteId, statut, hasResources);
     }
 
     @GetMapping("/calendar")

@@ -2,6 +2,7 @@ package com.cooperative.olive.service;
 
 import com.cooperative.olive.controller.PaginatedResponse;
 import com.cooperative.olive.dao.VergerRepository;
+import com.cooperative.olive.entity.ActiviteType;
 import com.cooperative.olive.entity.Role;
 import com.cooperative.olive.entity.Verger;
 import com.cooperative.olive.exception.BusinessException;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -29,6 +31,7 @@ public class VergerService {
     private final VergerRepository vergerRepository;
     private final AlertService alertService;
     private final CurrentUserService currentUserService;
+    private final ActiviteService activiteService;
 
     public List<Verger> getAll() {
         return vergerRepository.findAll();
@@ -72,6 +75,11 @@ public class VergerService {
         if ("PRET_POUR_RECOLTE".equals(verger.getStatut())) {
             alertService.envoyerNotificationVergerPret(saved, saved.getAgriculteurId());
         }
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.VERGER_CREE, "VERGER",
+                "Verger \"" + saved.getNom() + "\" créé.",
+                saved.getId(), saved.getNom(),
+                Map.of("statut", saved.getStatut(), "localisation", saved.getLocalisation()));
         return saved;
     }
 
@@ -105,6 +113,15 @@ public class VergerService {
             alertService.supprimerAlertesVerger(existing.getId());
         }
 
+        boolean statutChange = !previousStatus.equals(saved.getStatut());
+        ActiviteType typeActivite = statutChange ? ActiviteType.VERGER_STATUT_CHANGE : ActiviteType.VERGER_MODIFIE;
+        String desc = statutChange
+                ? "Statut verger \"" + saved.getNom() + "\" : " + previousStatus + " → " + saved.getStatut()
+                : "Verger \"" + saved.getNom() + "\" modifié.";
+        activiteService.enregistrerPourUtilisateurCourant(
+                typeActivite, "VERGER", desc, saved.getId(), saved.getNom(),
+                Map.of("ancienStatut", previousStatus, "nouveauStatut", saved.getStatut()));
+
         return saved;
     }
 
@@ -113,6 +130,10 @@ public class VergerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Verger non trouvé."));
         currentUserService.requireOwnerOrRole(existing.getAgriculteurId(), Role.RESPONSABLE_COOPERATIVE);
         vergerRepository.deleteById(id);
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.VERGER_SUPPRIME, "VERGER",
+                "Verger \"" + existing.getNom() + "\" supprimé.",
+                id, existing.getNom(), Map.of());
     }
 
     private void validateVergerFields(Verger verger) {

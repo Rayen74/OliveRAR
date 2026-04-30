@@ -1,0 +1,141 @@
+<div class="activites-layout">
+  <app-sidebar></app-sidebar>
+
+  <main class="activites-main">
+
+    <!-- ══════════════ HEADER ══════════════ -->
+    <header class="page-header">
+      <div class="header-title">
+        <mat-icon class="header-icon" style="font-size: 2rem; height: 2rem; width: 2rem; line-height: 2rem;">history</mat-icon>
+        <div>
+          <h1>Journal d'activité</h1>
+          <p class="header-sub">Traçabilité complète des actions sur la coopérative</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- ══════════════ FILTRES ══════════════ -->
+    <section class="filters-card" [formGroup]="filtresForm">
+
+
+
+      <!-- Filtre module -->
+      <div class="filter-field">
+        <label class="filter-label" for="filter-module">Module</label>
+        <select id="filter-module" class="filter-input" formControlName="module">
+          <option value="">Tous les modules</option>
+          <option *ngFor="let m of modules" [value]="m">{{ getModuleLabel(m) }}</option>
+        </select>
+      </div>
+
+      <!-- Filtre date début -->
+      <div class="filter-field">
+        <label class="filter-label" for="filter-debut">Date début</label>
+        <input id="filter-debut" class="filter-input" type="date" formControlName="debut" />
+      </div>
+
+      <!-- Filtre date fin -->
+      <div class="filter-field">
+        <label class="filter-label" for="filter-fin">Date fin</label>
+        <input id="filter-fin" class="filter-input" type="date" formControlName="fin" />
+      </div>
+
+      <!-- Reset -->
+      <button class="btn-reset" type="button" id="btn-reset-filters" (click)="reset()">
+        <mat-icon style="vertical-align: middle; font-size: 1.2rem; height: 1.2rem; width: 1.2rem;">refresh</mat-icon> Réinitialiser
+      </button>
+
+    </section>
+
+    <!-- ══════════════ ÉTAT LOADING ══════════════ -->
+    <div class="state-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Chargement des activités…</span>
+    </div>
+
+    <!-- ══════════════ ÉTAT ERREUR ══════════════ -->
+    <div class="state-error" *ngIf="!loading && error">
+      <mat-icon class="state-icon" style="font-size: 3rem; height: 3rem; width: 3rem;">error_outline</mat-icon>
+      <p>{{ error }}</p>
+      <button class="btn-retry" id="btn-retry" (click)="loadPage(currentPage)">Réessayer</button>
+    </div>
+
+    <!-- ══════════════ ÉTAT VIDE ══════════════ -->
+    <div class="state-empty" *ngIf="!loading && !error && groupes.length === 0">
+      <mat-icon class="state-icon" style="font-size: 3rem; height: 3rem; width: 3rem;">search_off</mat-icon>
+      <p>Aucune activité trouvée pour ces critères.</p>
+    </div>
+
+    <!-- ══════════════ LISTE GROUPÉE PAR DATE ══════════════ -->
+    <div class="activites-container" *ngIf="!loading && !error && groupes.length > 0">
+
+      <div class="date-group" *ngFor="let groupe of groupes">
+
+        <!-- En-tête de groupe date -->
+        <div class="date-header">
+          <span class="date-dot"></span>
+          <span class="date-label">{{ formatDateHeader(groupe.date) }}</span>
+        </div>
+
+        <!-- Cartes activités -->
+        <div class="activite-card" *ngFor="let act of groupe.items" id="act-{{ act.id }}">
+
+          <!-- Badge module -->
+          <span
+            class="module-badge"
+            [style.background]="getBadgeColor(act.module)"
+          >{{ getModuleLabel(act.module) }}</span>
+
+          <!-- Corps -->
+          <div class="act-body">
+            <p class="act-description">{{ act.description }}</p>
+            <div class="act-meta">
+              <span class="act-user" style="display: inline-flex; align-items: center; gap: 4px;">
+                <mat-icon class="meta-icon" style="font-size: 1.1rem; height: 1.1rem; width: 1.1rem;">person</mat-icon>{{ act.userNom }}
+                <span class="role-chip">{{ act.userRole | titlecase }}</span>
+              </span>
+              <span class="act-entity" *ngIf="act.entiteNom" style="display: inline-flex; align-items: center; gap: 4px;">
+                <mat-icon class="meta-icon" style="font-size: 1.1rem; height: 1.1rem; width: 1.1rem;">local_offer</mat-icon>{{ act.entiteNom }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Heure -->
+          <time class="act-time">{{ formatTime(act.dateAction) }}</time>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ PAGINATION ══════════════ -->
+    <nav class="pagination" *ngIf="pagination" aria-label="Pagination">
+      <button
+        id="btn-page-prev"
+        class="page-btn"
+        [disabled]="!pagination.hasPrevious"
+        (click)="loadPage(currentPage - 1)"
+      >‹ Préc.</button>
+
+      <button
+        *ngFor="let p of getPages()"
+        class="page-btn"
+        [class.page-btn--active]="p === currentPage"
+        [id]="'btn-page-' + p"
+        (click)="loadPage(p)"
+      >{{ p + 1 }}</button>
+
+      <button
+        id="btn-page-next"
+        class="page-btn"
+        [disabled]="!pagination.hasNext"
+        (click)="loadPage(currentPage + 1)"
+      >Suiv. ›</button>
+
+      <span class="page-info">
+        Page {{ pagination.page }} / {{ pagination.totalPages }}
+        &nbsp;·&nbsp; {{ pagination.totalItems }} activité(s)
+      </span>
+    </nav>
+
+  </main>
+</div>

@@ -1,4 +1,4 @@
-import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, FormsModule, ValidationErrors } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, FormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
 import { catchError, finalize, switchMap, take, tap } from 'rxjs/operators';
@@ -10,7 +10,7 @@ import {
   DropdownUser,
   DropdownVerger,
   PaginatedCollecteResponse,
-  ResourceAssignment
+  Affectation
 } from '../../services/collecte-api.service';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -40,16 +40,23 @@ export class CollectesComponent implements OnInit, OnDestroy {
   totalItems = 0;
 
   get isResponsableLogistique(): boolean {
+    const role = this.authService.getConnectedUser()?.role;
+    return role === Role.RESPONSABLE_LOGISTIQUE || role === Role.RESPONSABLE_COOPERATIVE;
+  }
+
+  get canEdit(): boolean {
     return this.authService.getConnectedUser()?.role === Role.RESPONSABLE_LOGISTIQUE;
   }
 
   filterChefId = '';
   filterStatut = '';
+  filterHasResources: boolean | '' = '';
 
   isLoading = false;
   isSubmitting = false;
   showForm = false;
   editingId: string | null = null;
+  editingCollecte: Collecte | null = null;
   deleteTarget: Collecte | null = null;
   isDeleteModalOpen = false;
   toast = { message: '', type: 'success' as 'success' | 'error', show: false };
@@ -60,11 +67,10 @@ export class CollectesComponent implements OnInit, OnDestroy {
   responsablesAffectation: DropdownUser[] = [];
   ouvriers: DropdownUser[] = [];
   unites: Unite[] = [];
-  selectedOuvrierIds: Set<string> = new Set();
-  currentAssignments: ResourceAssignment[] = [];
+  currentAssignments: Affectation[] = [];
 
   readonly statuts = ['PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE'];
-  readonly assignmentStatuses = ['PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE'];
+  readonly assignmentstatuses = ['PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE'];
 
   collecteForm: FormGroup;
   assignmentForm: FormGroup;
@@ -80,16 +86,16 @@ export class CollectesComponent implements OnInit, OnDestroy {
       name: [''],
       vergerId: [''],
       datePrevue: ['', this.futureDateValidator],
-      chefRecolteId: [''],
+      chefRecolteId: ['', Validators.required],
       responsableAffectationId: [''],
-      statut: ['PLANIFIEE']
+      statut: ['PLANIFIEE', Validators.required]
     });
 
     this.assignmentForm = this.fb.group({
-      uniteId: [''],
+      cibleId: [''],
       startTime: [''],
       endTime: [''],
-      status: ['PLANIFIEE']
+      statutReservation: ['PLANIFIEE']
     });
   }
 
@@ -113,7 +119,7 @@ export class CollectesComponent implements OnInit, OnDestroy {
         this.error = '';
       }),
       switchMap(() =>
-        this.collecteApi.getAll(this.currentPage, this.pageSize, this.filterChefId, this.filterStatut).pipe(
+        this.collecteApi.getAll(this.currentPage, this.pageSize, this.filterChefId, this.filterStatut, this.filterHasResources).pipe(
           catchError(() => {
             this.error = 'Impossible de charger les collectes.';
             return of({
@@ -132,6 +138,7 @@ export class CollectesComponent implements OnInit, OnDestroy {
         this.totalItems = res.totalItems ?? 0;
         this.totalPages = Math.max(1, res.totalPages ?? 1);
         this.isLoading = false;
+        this.cdr.detectChanges();
       }),
     );
   }
@@ -175,8 +182,7 @@ export class CollectesComponent implements OnInit, OnDestroy {
 
   openCreateForm(): void {
     this.editingId = null;
-    this.editingId = null;
-    this.selectedOuvrierIds.clear();
+    this.editingCollecte = null;
     this.currentAssignments = [];
     this.collecteForm.reset({
       name: '',
@@ -187,18 +193,18 @@ export class CollectesComponent implements OnInit, OnDestroy {
       statut: 'PLANIFIEE'
     });
     this.assignmentForm.reset({
-      uniteId: '',
+      cibleId: '',
       startTime: '',
       endTime: '',
-      status: 'PLANIFIEE'
+      statutReservation: 'PLANIFIEE'
     });
     this.showForm = true;
   }
 
   startEdit(c: Collecte): void {
     this.editingId = c.id ?? null;
-    this.selectedOuvrierIds = new Set(c.equipeIds ?? []);
-    this.currentAssignments = [...(c.resourceAssignments ?? [])];
+    this.editingCollecte = c;
+    this.currentAssignments = [...(c.affectations ?? [])];
     this.collecteForm.patchValue({
       name: c.name,
       vergerId: c.vergerId,
@@ -208,10 +214,10 @@ export class CollectesComponent implements OnInit, OnDestroy {
       statut: c.statut,
     });
     this.assignmentForm.reset({
-      uniteId: '',
+      cibleId: '',
       startTime: '',
       endTime: '',
-      status: 'PLANIFIEE'
+      statutReservation: 'PLANIFIEE'
     });
     this.showForm = true;
   }
@@ -219,26 +225,14 @@ export class CollectesComponent implements OnInit, OnDestroy {
   cancelForm(): void {
     this.showForm = false;
     this.editingId = null;
-    this.selectedOuvrierIds.clear();
+    this.editingCollecte = null;
     this.currentAssignments = [];
     this.collecteForm.reset();
   }
 
-  toggleOuvrier(id: string): void {
-    if (this.selectedOuvrierIds.has(id)) {
-      this.selectedOuvrierIds.delete(id);
-    } else {
-      this.selectedOuvrierIds.add(id);
-    }
-  }
-
-  isOuvrierSelected(id: string): boolean {
-    return this.selectedOuvrierIds.has(id);
-  }
-
   addAssignment(): void {
     const raw = this.assignmentForm.getRawValue();
-    if (!raw.uniteId) {
+    if (!raw.cibleId) {
       this.showToast('Choisissez une unité.', 'error');
       return;
     }
@@ -251,21 +245,29 @@ export class CollectesComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Hybrid approach UX: Prevent confusing duplicate assignment in the same list
+    const isDuplicate = this.currentAssignments.some(a => a.cibleId === raw.cibleId);
+    if (isDuplicate) {
+      this.showToast('Cette unité est déjà ajoutée aux ressources spécifiques.', 'error');
+      return;
+    }
+
     this.currentAssignments = [
       ...this.currentAssignments,
       {
-        uniteId: raw.uniteId,
-        startTime: new Date(raw.startTime).toISOString(),
-        endTime: new Date(raw.endTime).toISOString(),
-        status: raw.status
+        cibleId: raw.cibleId,
+        typeCible: raw.typeCible || 'MACHINE',
+        startTime: raw.startTime,
+        endTime: raw.endTime,
+        statutReservation: raw.statutReservation
       }
     ];
 
     this.assignmentForm.reset({
-      uniteId: '',
+      cibleId: '',
       startTime: '',
       endTime: '',
-      status: 'PLANIFIEE'
+      statutReservation: 'PLANIFIEE'
     });
   }
 
@@ -297,8 +299,7 @@ export class CollectesComponent implements OnInit, OnDestroy {
     const payload: Collecte = {
       ...raw,
       name: raw.name.trim(),
-      equipeIds: Array.from(this.selectedOuvrierIds),
-      resourceAssignments: this.currentAssignments
+      affectations: this.currentAssignments
     };
 
     this.isSubmitting = true;
@@ -383,9 +384,21 @@ export class CollectesComponent implements OnInit, OnDestroy {
     return `${u.prenom} ${u.nom}`;
   }
 
-  resourceLabel(uniteId: string): string {
-    const unite = this.unites.find((item) => item.id === uniteId);
-    return unite ? `${unite.codeUnique}` : uniteId;
+  resourceLabel(cibleId: string, assignment?: any): string {
+    // 1. If we have enriched data from the backend (already formatted with code), use it
+    if (assignment?.resource?.name) {
+      return assignment.resource.name;
+    }
+
+    // 2. Fallback to local lookup for units
+    const unite = this.unites.find((item) => item.id === cibleId);
+    if (unite) return unite.codeUnique;
+    
+    // 3. Fallback to local lookup for users
+    const user = this.ouvriers.find(u => u.id === cibleId);
+    if (user) return `${user.prenom} ${user.nom}`;
+    
+    return cibleId;
   }
 
   selectedVergerLocation(): string {

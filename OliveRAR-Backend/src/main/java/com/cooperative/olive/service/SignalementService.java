@@ -2,6 +2,7 @@ package com.cooperative.olive.service;
 
 import com.cooperative.olive.dao.SignalementRepository;
 import com.cooperative.olive.dao.VergerRepository;
+import com.cooperative.olive.entity.ActiviteType;
 import com.cooperative.olive.entity.Role;
 import com.cooperative.olive.entity.Signalement;
 import com.cooperative.olive.entity.Verger;
@@ -21,6 +22,7 @@ public class SignalementService {
     private final SignalementRepository signalementRepository;
     private final VergerRepository vergerRepository;
     private final CurrentUserService currentUserService;
+    private final ActiviteService activiteService;
 
     public List<Signalement> getMine() {
         String currentUserId = currentUserService.getRequiredCurrentUser().getId();
@@ -49,7 +51,15 @@ public class SignalementService {
         signalement.setCreatedAt(LocalDateTime.now());
         signalement.setUpdatedAt(LocalDateTime.now());
         signalement.getHistory().add("Signalement créé le " + LocalDateTime.now());
-        return signalementRepository.save(signalement);
+        Signalement saved = signalementRepository.save(signalement);
+
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.ALERTE_CREEE, "ALERTE",
+                "Alerte créée pour le verger \"" + verger.getNom() + "\".",
+                saved.getId(), "Alerte " + saved.getIssueType(),
+                java.util.Map.of("verger", verger.getNom(), "type", saved.getIssueType()));
+
+        return saved;
     }
 
     public Signalement updateStatus(String id, String status) {
@@ -65,6 +75,14 @@ public class SignalementService {
         signalement.setStatus(status);
         signalement.setUpdatedAt(LocalDateTime.now());
         signalement.getHistory().add("Statut mis à jour vers " + status + " le " + LocalDateTime.now());
-        return signalementRepository.save(signalement);
+        Signalement saved = signalementRepository.save(signalement);
+
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.ALERTE_STATUT_CHANGE, "ALERTE",
+                "Statut de l'alerte changé vers : " + status,
+                saved.getId(), "Alerte " + saved.getIssueType(),
+                java.util.Map.of("nouveauStatut", status));
+
+        return saved;
     }
 }

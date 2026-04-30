@@ -1,6 +1,7 @@
 package com.cooperative.olive.service;
 
 import com.cooperative.olive.dao.UserRepository;
+import com.cooperative.olive.entity.ActiviteType;
 import com.cooperative.olive.entity.Ouvrier;
 import com.cooperative.olive.entity.Role;
 import com.cooperative.olive.entity.User;
@@ -29,6 +30,7 @@ public class UserManagementService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MongoTemplate mongoTemplate;
+    private final ActiviteService activiteService;
 
     public List<User> getAllManagedUsers() {
         return userRepository.findByRoleNot(Role.RESPONSABLE_COOPERATIVE);
@@ -108,6 +110,7 @@ public class UserManagementService {
         user.setId(null);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         
+        User savedUser;
         if (user.getRole() == Role.OUVRIER) {
             Ouvrier ouvrier = new Ouvrier();
             ouvrier.setNom(user.getNom());
@@ -117,10 +120,18 @@ public class UserManagementService {
             ouvrier.setRole(user.getRole());
             ouvrier.setPassword(user.getPassword());
             ouvrier.setImageUrl(user.getImageUrl());
-            return userRepository.save(ouvrier);
+            savedUser = userRepository.save(ouvrier);
+        } else {
+            savedUser = userRepository.save(user);
         }
-        
-        return userRepository.save(user);
+
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.USER_CREE, "USER",
+                "Utilisateur \"" + savedUser.getNom() + " " + savedUser.getPrenom() + "\" créé avec le rôle " + savedUser.getRole(),
+                savedUser.getId(), savedUser.getNom() + " " + savedUser.getPrenom(),
+                java.util.Map.of("role", savedUser.getRole().name(), "email", savedUser.getEmail()));
+
+        return savedUser;
     }
 
     public User updateUser(String id, User userDetails) {
@@ -146,6 +157,7 @@ public class UserManagementService {
             existingUser.setPassword(passwordEncoder.encode(newPassword));
         }
 
+        User savedUser;
         if (userDetails.getRole() == Role.OUVRIER && !(existingUser instanceof Ouvrier)) {
             // Need to convert existing User to Ouvrier
             Ouvrier ouvrier = new Ouvrier();
@@ -158,10 +170,18 @@ public class UserManagementService {
             ouvrier.setPassword(existingUser.getPassword());
             ouvrier.setImageUrl(existingUser.getImageUrl());
             userRepository.deleteById(existingUser.getId());
-            return userRepository.save(ouvrier);
+            savedUser = userRepository.save(ouvrier);
+        } else {
+            savedUser = userRepository.save(existingUser);
         }
 
-        return userRepository.save(existingUser);
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.USER_MODIFIE, "USER",
+                "Profil utilisateur \"" + savedUser.getNom() + " " + savedUser.getPrenom() + "\" modifié.",
+                savedUser.getId(), savedUser.getNom() + " " + savedUser.getPrenom(),
+                java.util.Map.of("role", savedUser.getRole().name(), "email", savedUser.getEmail()));
+
+        return savedUser;
     }
 
     public User updateProfile(String id, User userDetails) {
@@ -211,6 +231,12 @@ public class UserManagementService {
         }
 
         userRepository.deleteById(id);
+
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.USER_SUPPRIME, "USER",
+                "Utilisateur \"" + existing.getNom() + " " + existing.getPrenom() + "\" supprimé.",
+                existing.getId(), existing.getNom() + " " + existing.getPrenom(),
+                java.util.Map.of("role", existing.getRole().name(), "email", existing.getEmail()));
     }
 
     private void validatePassword(String password) {

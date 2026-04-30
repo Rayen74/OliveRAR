@@ -45,13 +45,29 @@ export const routes: Routes = [
         loadComponent: () => import('./features/collectes/pages/collectes/collectes').then((m) => m.CollectesComponent)
       },
       {
-        path: 'collectes/calendrier',
-        loadComponent: () => import('./features/collectes/pages/collecte-calendar/collecte-calendar')
-          .then((m) => m.CollecteCalendarComponent)
+        path: 'tournees',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/tournees/pages/tournees/tournees').then((m) => m.TourneesPageComponent)
+          },
+          {
+            path: 'calendrier',
+            loadComponent: () => import('./features/collectes/pages/collecte-calendar/collecte-calendar').then((m) => m.CollecteCalendarComponent)
+          }
+        ]
       },
       {
-        path: 'tournees',
-        loadComponent: () => import('./features/tournees/pages/tournees/tournees').then((m) => m.TourneesPageComponent)
+        path: 'activites',
+        loadComponent: () => import('./features/activites/pages/activite-list/activite-list').then((m) => m.ActiviteListComponent)
+      },
+      {
+        path: 'types-ressources',
+        loadComponent: () => import('./features/ressources/pages/types-ressources/types-ressources').then((m) => m.TypesRessourcesComponent)
+      },
+      {
+        path: 'unites',
+        loadComponent: () => import('./features/ressources/pages/unites-ressources/unites-ressources').then((m) => m.UnitesRessourcesComponent)
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
@@ -104,6 +120,10 @@ export const routes: Routes = [
       {
         path: 'tournees',
         loadComponent: () => import('./features/tournees/pages/tournees/tournees').then((m) => m.TourneesPageComponent)
+      },
+      {
+        path: 'activites',
+        loadComponent: () => import('./features/activites/pages/activite-list/activite-list').then((m) => m.ActiviteListComponent)
       },
       {
         path: 'profile',

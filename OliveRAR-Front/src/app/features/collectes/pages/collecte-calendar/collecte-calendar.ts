@@ -7,7 +7,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
 
-import { CollecteApiService, CollecteCalendarItem } from '../../services/collecte-api.service';
+import { TourneeApiService } from '../../../tournees/services/tournee-api.service';
 import { SidebarComponent } from '../../../../shared/components/sidebar/sidebar';
 
 interface SelectedEvent {
@@ -15,9 +15,8 @@ interface SelectedEvent {
   title: string;
   datePrevue: string;
   statut: string;
-  vergerNom: string;
-  chefRecolteNom: string;
-  equipeSize: number;
+  vergerNames: string[];
+  resourceCount: number;
 }
 
 @Component({
@@ -49,7 +48,7 @@ export class CollecteCalendarComponent implements OnInit {
   };
 
   constructor(
-    private collecteApi: CollecteApiService,
+    private tourneeApi: TourneeApiService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -62,21 +61,20 @@ export class CollecteCalendarComponent implements OnInit {
       }
     }, 10000);
 
-    this.collecteApi.getCalendarData().subscribe({
+    this.tourneeApi.getCalendarData().subscribe({
       next: (res) => {
         try {
-          const events = (res.data ?? []).map((item: CollecteCalendarItem) => ({
+          const events = (res.data ?? []).map((item: any) => ({
             id: item.id,
-            title: item.vergerNom || 'Collecte',
+            title: item.name || 'Tournée',
             date: item.datePrevue,
-            backgroundColor: this.statutColor(item.statut),
-            borderColor: this.statutBorderColor(item.statut),
+            backgroundColor: this.statutColor(item.status),
+            borderColor: this.statutBorderColor(item.status),
             textColor: '#ffffff',
             extendedProps: {
-              statut: item.statut,
-              vergerNom: item.vergerNom,
-              chefRecolteNom: item.chefRecolteNom,
-              equipeSize: item.equipeSize,
+              statut: item.status,
+              vergerNames: item.vergerNames,
+              resourceCount: item.resourceCount,
             },
           }));
           this.calendarOptions = { ...this.calendarOptions, events };
@@ -102,9 +100,8 @@ export class CollecteCalendarComponent implements OnInit {
       title: info.event.title,
       datePrevue: info.event.startStr,
       statut: info.event.extendedProps['statut'],
-      vergerNom: info.event.extendedProps['vergerNom'],
-      chefRecolteNom: info.event.extendedProps['chefRecolteNom'],
-      equipeSize: info.event.extendedProps['equipeSize'],
+      vergerNames: info.event.extendedProps['vergerNames'],
+      resourceCount: info.event.extendedProps['resourceCount'],
     };
     this.cdr.detectChanges();
   }

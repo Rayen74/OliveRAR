@@ -9,7 +9,7 @@ import {
   DropdownUser,
   DropdownVerger,
   PaginatedCollecteResponse,
-  ResourceAssignment
+  Affectation
 } from '../models/collecte.model';
 
 export type {
@@ -19,7 +19,7 @@ export type {
   DropdownUser,
   DropdownVerger,
   PaginatedCollecteResponse,
-  ResourceAssignment
+  Affectation
 } from '../models/collecte.model';
 
 @Injectable({ providedIn: 'root' })
@@ -28,13 +28,16 @@ export class CollecteApiService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getAll(page = 0, size = 5, chefRecolteId?: string, statut?: string): Observable<PaginatedCollecteResponse> {
+  getAll(page = 0, size = 5, chefRecolteId?: string, statut?: string, hasResources?: boolean | ''): Observable<PaginatedCollecteResponse> {
     let params = new HttpParams().set('page', page).set('size', size);
     if (chefRecolteId) {
       params = params.set('chefRecolteId', chefRecolteId);
     }
     if (statut) {
       params = params.set('statut', statut);
+    }
+    if (hasResources !== '' && hasResources !== undefined) {
+      params = params.set('hasResources', hasResources);
     }
     return this.http.get<PaginatedCollecteResponse>(`${this.base}/collectes`, { params });
   }
@@ -71,7 +74,7 @@ export class CollecteApiService {
     return this.http.get<{ success: boolean; users: DropdownUser[] }>(`${this.base}/users/by-role`, { params });
   }
 
-  updateResourceAssignments(id: string, payload: Collecte): Observable<CollecteMutationResponse> {
+  updateAffectations(id: string, payload: Collecte): Observable<CollecteMutationResponse> {
     return this.http.put<CollecteMutationResponse>(`${this.base}/collectes/${id}`, payload);
   }
 }

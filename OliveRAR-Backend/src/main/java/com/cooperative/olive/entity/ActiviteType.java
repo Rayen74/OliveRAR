@@ -1,0 +1,47 @@
+package com.cooperative.olive.entity;
+
+public enum ActiviteType {
+
+    // --- Vergers ---
+    VERGER_CREE,
+    VERGER_MODIFIE,
+    VERGER_SUPPRIME,
+    VERGER_STATUT_CHANGE,
+    VERGER_MATURITE_MISE_A_JOUR,
+
+    // --- Alertes ---
+    ALERTE_CREEE,
+    ALERTE_MODIFIEE,
+    ALERTE_SUPPRIMEE,
+    ALERTE_RESOLUE,
+    ALERTE_STATUT_CHANGE,
+
+    // --- Collectes ---
+    COLLECTE_CREE,
+    COLLECTE_MODIFIEE,
+    COLLECTE_SUPPRIMEE,
+    COLLECTE_STATUT_CHANGE,
+
+    // --- Équipements / Ressources ---
+    EQUIPEMENT_CREE,
+    EQUIPEMENT_MODIFIE,
+    EQUIPEMENT_SUPPRIME,
+    EQUIPEMENT_STATUT_CHANGE,
+    EQUIPEMENT_AFFECTE,
+    EQUIPEMENT_DESAFFECTE,
+
+    // --- Tournées ---
+    TOURNEE_CREEE,
+    TOURNEE_MODIFIEE,
+    TOURNEE_SUPPRIMEE,
+    TOURNEE_STATUT_CHANGE,
+    TOURNEE_EQUIPEMENT_AFFECTE,
+
+    // --- Utilisateurs ---
+    USER_CONNECTE,
+    USER_DECONNECTE,
+    USER_CREE,
+    USER_MODIFIE,
+    USER_SUPPRIME,
+    USER_MOT_DE_PASSE_REINITIALISE
+}

@@ -1,11 +1,5 @@
 <div class="flex min-h-screen items-stretch bg-earth-bg">
-  <div *ngIf="toast.show" class="fixed top-6 right-6 z-[9999] flex items-center gap-2 rounded-xl border px-4 py-3 shadow-xl"
-    [style.background-color]="toast.type === 'success' ? '#f0fdf4' : '#fef2f2'"
-    [style.border-color]="toast.type === 'success' ? '#86efac' : '#fca5a5'"
-    [style.color]="toast.type === 'success' ? '#166534' : '#991b1b'">
-    <span class="material-symbols-outlined text-base">{{ toast.type === 'success' ? 'check_circle' : 'error' }}</span>
-    <span class="text-sm font-medium">{{ toast.message }}</span>
-  </div>
+
 
   <app-sidebar></app-sidebar>
 
@@ -13,14 +7,21 @@
     <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h1 class="text-3xl font-bold text-earth-text">Gestion des tournées</h1>
-        <p class="text-sm text-earth-muted">Tournées multi-collectes avec affectation directe des ressources.</p>
+        <p class="text-sm text-earth-muted">Tournées multi-collectes avec ressources communes héritées par les collectes.</p>
       </div>
 
-      <button type="button" (click)="openCreateForm()"
-        class="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-olive-600 px-4 py-2.5 text-white shadow-sm transition-colors hover:bg-olive-700">
-        <span class="material-symbols-outlined text-base">route</span>
-        Ajouter une tournée
-      </button>
+      <div class="flex gap-2">
+        <a routerLink="/responsable/tournees/calendrier"
+          class="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-earth-border bg-white px-4 py-2.5 text-earth-text shadow-sm transition-colors hover:bg-earth-bg">
+          <span class="material-symbols-outlined text-base">calendar_month</span>
+          Calendrier
+        </a>
+        <button *ngIf="canEdit" type="button" (click)="openCreateForm()"
+          class="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-olive-600 px-4 py-2.5 text-white shadow-sm transition-colors hover:bg-olive-700">
+          <span class="material-symbols-outlined text-base">route</span>
+          Ajouter une tournée
+        </button>
+      </div>
     </header>
 
     <form [formGroup]="filterForm" class="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-earth-border bg-white p-4 shadow-sm">
@@ -29,10 +30,10 @@
       </div>
       <input type="text" formControlName="search" (input)="onFilterChange()" placeholder="Nom de la tournée"
         class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
-      <select formControlName="status" (change)="onFilterChange()"
+      <select formControlName="statutReservation" (change)="onFilterChange()"
         class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
         <option value="">Tous les statuts</option>
-        <option *ngFor="let status of statuses" [value]="status">{{ formatStatus(status) }}</option>
+        <option *ngFor="let statutReservation of statuses" [value]="statutReservation">{{ formatStatus(statutReservation) }}</option>
       </select>
     </form>
 
@@ -52,17 +53,24 @@
             <p class="mt-2 text-sm text-earth-muted">{{ tournee.collecteIds.length }} collectes associées</p>
             <p class="mt-1 text-sm text-earth-muted">Début : {{ tournee.plannedStartTime | date:'short' }}</p>
             <p class="text-sm text-earth-muted">Fin : {{ tournee.plannedEndTime | date:'short' }}</p>
-            <p class="mt-2 text-sm text-earth-muted">Ressources : {{ tournee.resourceAssignments?.length || 0 }}</p>
+            <p class="mt-2 text-sm text-earth-muted flex flex-wrap gap-1">
+              <span class="font-medium">Ressources :</span>
+              <span *ngFor="let aff of tournee.affectations; let last = last" class="text-olive-700">
+                {{ resourceLabel(aff.cibleId, aff) }}{{ !last ? ',' : '' }}
+              </span>
+              <span *ngIf="!tournee.affectations?.length" class="italic text-gray-400">Aucune</span>
+            </p>
+            <p class="text-sm text-earth-muted">Ouvriers mobilisés : {{ tournee.equipe?.length || 0 }}</p>
           </div>
 
           <div class="flex gap-2">
             <button (click)="viewDetails(tournee)" class="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-700 transition-colors hover:bg-sky-100" title="Détails">
               <span class="material-symbols-outlined text-base">visibility</span>
             </button>
-            <button (click)="startEdit(tournee)" class="flex h-9 w-9 items-center justify-center rounded-lg bg-olive-50 text-olive-700 transition-colors hover:bg-olive-100" title="Modifier">
+            <button *ngIf="canEdit" (click)="startEdit(tournee)" class="flex h-9 w-9 items-center justify-center rounded-lg bg-olive-50 text-olive-700 transition-colors hover:bg-olive-100" title="Modifier">
               <span class="material-symbols-outlined text-base">edit</span>
             </button>
-            <button (click)="openDeleteModal(tournee)" class="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100" title="Supprimer">
+            <button *ngIf="canEdit" (click)="openDeleteModal(tournee)" class="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 transition-colors hover:bg-red-100" title="Supprimer">
               <span class="material-symbols-outlined text-base">delete</span>
             </button>
           </div>
@@ -92,7 +100,7 @@
       <div class="mb-6 flex items-center justify-between">
         <div>
           <h2 class="text-xl font-bold text-earth-text">{{ editingId ? 'Modifier une tournée' : 'Créer une tournée' }}</h2>
-          <p class="text-sm text-earth-muted mt-1">Sélection de collectes et affectation des ressources de la tournée.</p>
+          <p class="text-sm text-earth-muted mt-1">Sélection de collectes et affectation des ressources communes de la tournée.</p>
         </div>
         <button (click)="cancelForm()" class="flex h-8 w-8 items-center justify-center rounded-lg text-earth-muted transition-colors hover:bg-earth-bg hover:text-earth-text">
           <span class="material-symbols-outlined text-xl">close</span>
@@ -101,8 +109,8 @@
 
       <form [formGroup]="tourneeForm" (ngSubmit)="submitForm()" class="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <input formControlName="name" placeholder="Nom de la tournée" class="rounded-lg border border-earth-border px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
-        <select formControlName="status" class="rounded-lg border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
-          <option *ngFor="let status of statuses" [value]="status">{{ formatStatus(status) }}</option>
+        <select formControlName="statutReservation" class="rounded-lg border border-earth-border bg-white px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
+          <option *ngFor="let statutReservation of statuses" [value]="statutReservation">{{ formatStatus(statutReservation) }}</option>
         </select>
         <input type="datetime-local" formControlName="plannedStartTime" class="rounded-lg border border-earth-border px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
         <input type="datetime-local" formControlName="plannedEndTime" class="rounded-lg border border-earth-border px-3 py-2.5 outline-none focus:ring-1 focus:ring-olive-500">
@@ -118,12 +126,38 @@
             <span class="text-sm text-earth-muted">{{ selectedCollecteIds.size }} sélectionnée(s)</span>
           </div>
           <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label *ngFor="let collecte of collectes" class="flex items-start gap-3 rounded-lg border border-earth-border p-3">
-              <input type="checkbox" [checked]="isCollecteSelected(collecte.id!)" (change)="toggleCollecte(collecte.id!)">
+            <label *ngFor="let collecte of collectes"
+              class="flex items-start gap-3 rounded-lg border border-earth-border p-3"
+              [class.opacity-60]="!isCollecteEligible(collecte)">
+              <input type="checkbox"
+                [checked]="isCollecteSelected(collecte.id!)"
+                [disabled]="!isCollecteEligible(collecte)"
+                (change)="toggleCollecte(collecte.id!)">
               <div>
-                <p class="font-medium text-earth-text">{{ collecte.name }}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="font-medium text-earth-text">{{ collecte.name }}</p>
+                  <span *ngIf="collecteHasResources(collecte)" class="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] text-sky-700">
+                    Avec ressources
+                  </span>
+                  <span *ngIf="collecte.tourneeId && collecte.tourneeId !== editingId" class="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
+                    Déjà dans une tournée
+                  </span>
+                </div>
                 <p class="text-sm text-earth-muted">{{ collecte.vergerNom }} - {{ collecte.localisation }}</p>
-                <p class="text-sm text-earth-muted">{{ collecte.datePrevue }}</p>
+                <div class="mt-1 flex items-center justify-between gap-2">
+                  <p class="text-xs text-earth-muted">⏰ {{ collecte.datePrevue }}</p>
+                  <div class="flex items-center gap-2">
+                    <button type="button" (click)="openSummaryModal(collecte, currentAssignments)" class="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">visibility</span> Bilan
+                    </button>
+                    <button type="button" (click)="manageSpecificResources(collecte)" class="text-[10px] font-bold text-olive-600 hover:underline flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">settings</span> Gérer
+                    </button>
+                  </div>
+                </div>
+                <p *ngIf="!isCollecteEligible(collecte)" class="mt-1 text-xs text-red-600">
+                  {{ collecteIneligibilityReason(collecte) }}
+                </p>
               </div>
             </label>
           </div>
@@ -131,17 +165,24 @@
 
         <div *ngIf="isResponsableLogistique" class="rounded-xl border border-earth-border p-4 xl:col-span-2">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="font-semibold text-earth-text">Ressources de la tournée</h3>
+            <h3 class="font-semibold text-earth-text">Ressources communes</h3>
             <span class="text-sm text-earth-muted">{{ currentAssignments.length }} affectation(s)</span>
           </div>
           <div [formGroup]="assignmentForm" class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div>
               <label class="mb-1 block text-xs font-medium text-earth-muted">Unité à affecter</label>
-              <select formControlName="uniteId" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
-                <option value="">Choisir une unité</option>
-                <option *ngFor="let res of unites" [value]="res.id">
-                  {{ res.codeUnique }}
-                </option>
+              <select formControlName="cibleId" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+                <option value="">Choisir une ressource</option>
+                <optgroup label="Unités Mobiles">
+                  <option *ngFor="let res of unites" [value]="res.id">
+                    {{ res.codeUnique }}
+                  </option>
+                </optgroup>
+                <optgroup label="Ouvriers">
+                  <option *ngFor="let user of dropdownUsers" [value]="user.id">
+                    {{ userLabel(user) }}
+                  </option>
+                </optgroup>
               </select>
             </div>
             <div>
@@ -154,25 +195,31 @@
             </div>
             <div>
               <label class="mb-1 block text-xs font-medium text-earth-muted">Statut de l'affectation</label>
-              <select formControlName="status" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
-                <option *ngFor="let status of statuses" [value]="status">{{ formatStatus(status) }}</option>
+              <select formControlName="statutReservation" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+                <option *ngFor="let statutReservation of statuses" [value]="statutReservation">{{ formatStatus(statutReservation) }}</option>
               </select>
             </div>
           </div>
 
-          <div class="mt-4 flex justify-end">
+          <div class="mt-4 flex justify-end gap-2">
+            <button *ngIf="editingAssignmentIndex !== null" type="button" (click)="cancelEditAssignment()" class="rounded-lg border border-earth-border px-4 py-2 text-sm text-earth-text transition-colors hover:bg-gray-50">
+              Annuler
+            </button>
             <button type="button" (click)="addAssignment()" class="rounded-lg bg-olive-600 px-4 py-2 text-sm text-white transition-colors hover:bg-olive-700">
-              Ajouter l'affectation
+              {{ editingAssignmentIndex !== null ? 'Mettre à jour' : 'Ajouter l\'affectation' }}
             </button>
           </div>
 
           <div *ngIf="currentAssignments.length" class="mt-4 space-y-2">
             <div *ngFor="let assignment of currentAssignments; let i = index" class="flex items-start justify-between rounded-lg bg-earth-bg/60 p-3 text-sm">
               <div>
-                <p class="font-medium text-earth-text">{{ resourceLabel(assignment.uniteId) }}</p>
+                <p class="font-medium text-earth-text">{{ resourceLabel(assignment.cibleId, assignment) }}</p>
                 <p class="text-earth-muted">⏰ {{ assignment.startTime | date:'short' }} - {{ assignment.endTime | date:'short' }}</p>
               </div>
-              <button type="button" (click)="removeAssignment(i)" class="rounded-lg bg-red-50 px-3 py-1 text-red-700 transition-colors hover:bg-red-100">Retirer</button>
+              <div class="flex items-center gap-2">
+                <button type="button" (click)="editAssignment(i)" class="rounded-lg bg-blue-50 px-3 py-1 text-blue-700 transition-colors hover:bg-blue-100">Modifier</button>
+                <button type="button" (click)="removeAssignment(i)" class="rounded-lg bg-red-50 px-3 py-1 text-red-700 transition-colors hover:bg-red-100">Retirer</button>
+              </div>
             </div>
           </div>
         </div>
@@ -201,10 +248,63 @@
       </div>
 
       <div class="space-y-3">
+        <div class="rounded-lg border border-earth-border bg-earth-bg/30 p-4">
+          <p class="font-semibold text-earth-text">Équipe de la tournée</p>
+          <p class="mt-1 text-sm text-earth-muted" *ngIf="selectedDetails.equipe?.length; else noEquipe">
+            {{ selectedDetails.equipe?.length }} ouvrier(s) mobilisé(s)
+          </p>
+          <ng-template #noEquipe>
+            <p class="mt-1 text-sm text-earth-muted">Aucun ouvrier rattaché via les collectes.</p>
+          </ng-template>
+          <div *ngIf="selectedDetails.equipe?.length" class="mt-3 flex flex-wrap gap-2">
+            <span *ngFor="let membre of selectedDetails.equipe"
+              class="rounded-full border border-earth-border bg-white px-3 py-1 text-xs text-earth-text">
+              {{ membre.nom }}
+            </span>
+          </div>
+        </div>
+
+        <div class="rounded-lg border border-earth-border bg-olive-50/30 p-4">
+          <p class="font-semibold text-earth-text">Ressources communes (Partagées)</p>
+          <div *ngIf="selectedDetails.affectations?.length; else noShared" class="mt-3 space-y-2">
+            <div *ngFor="let aff of selectedDetails.affectations" class="flex items-center justify-between rounded-lg bg-white p-3 border border-earth-border shadow-sm">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-olive-600">
+                  {{ aff.typeCible === 'MACHINE' ? 'agriculture' : 'person' }}
+                </span>
+                <div>
+                  <p class="font-medium text-earth-text">{{ resourceLabel(aff.cibleId, aff) }}</p>
+                  <p class="text-xs text-earth-muted">
+                    ⏰ {{ aff.startTime | date:'shortTime' }} - {{ aff.endTime | date:'shortTime' }}
+                  </p>
+                </div>
+              </div>
+              <span class="rounded-full px-2 py-1 text-[10px] font-bold"
+                [ngClass]="{
+                  'bg-blue-100 text-blue-700': aff.statutReservation === 'PLANIFIEE',
+                  'bg-green-100 text-green-700': aff.statutReservation === 'CONFIRMEE'
+                }">
+                {{ aff.statutReservation }}
+              </span>
+            </div>
+          </div>
+          <ng-template #noShared>
+            <p class="mt-1 text-sm text-earth-muted">Aucune ressource commune affectée à cette tournée.</p>
+          </ng-template>
+        </div>
+
         <div *ngFor="let collecte of selectedDetails.collectes" class="rounded-lg border border-earth-border p-4">
-          <p class="font-semibold text-earth-text">{{ collecte.name }}</p>
+          <div class="flex items-center justify-between mb-2">
+            <p class="font-semibold text-earth-text">{{ collecte.name }}</p>
+            <button (click)="openSummaryModal(collecte, selectedDetails.affectations || [])" class="text-xs font-bold text-olive-600 hover:underline flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">visibility</span> Bilan complet
+            </button>
+          </div>
           <p class="text-sm text-earth-muted">🗺️ {{ collecte.localisation }}</p>
           <p class="text-sm text-earth-muted">{{ collecte.datePrevue }}</p>
+          <p class="mt-2 text-sm text-earth-muted">Ouvriers : {{ collecte.equipe?.length || 0 }}</p>
+          <p class="mt-1 text-sm text-earth-muted">Ressources héritées : {{ collecte.inheritedAffectations?.length || 0 }}</p>
+          <p class="text-sm text-earth-muted">Ressources spécifiques : {{ collecte.affectations?.length || 0 }}</p>
         </div>
       </div>
     </div>
@@ -225,4 +325,134 @@
       </div>
     </div>
   </div>
+
+  <!-- ── Modal: Ressources spécifiques d'une collecte ── -->
+  <div *ngIf="showSpecificResourcesModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-2xl rounded-xl border border-earth-border bg-white p-6 shadow-2xl my-auto">
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <h3 class="text-xl font-bold text-earth-text">Ressources spécifiques</h3>
+          <p class="text-sm text-earth-muted">Collecte : {{ targetCollecteForResources?.name }}</p>
+        </div>
+        <button (click)="closeSpecificResourcesModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-earth-muted hover:bg-earth-bg">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div class="rounded-lg bg-olive-50/30 p-4 border border-olive-100">
+          <p class="text-xs font-semibold text-olive-800 mb-3">Ajouter une ressource exceptionnelle pour cette collecte</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+             <div class="md:col-span-2">
+                <label class="mb-1 block text-[10px] font-bold uppercase text-earth-muted">Ressource</label>
+                <select [formControl]="$any(assignmentForm.get('cibleId'))" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2 text-sm outline-none">
+                  <option value="">-- Sélectionner --</option>
+                  <optgroup label="Machines">
+                    <option *ngFor="let u of unites" [value]="u.id">{{ u.codeUnique }}</option>
+                  </optgroup>
+                  <optgroup label="Ouvriers">
+                    <option *ngFor="let user of dropdownUsers" [value]="user.id">{{ userLabel(user) }}</option>
+                  </optgroup>
+                </select>
+             </div>
+             <div>
+                <label class="mb-1 block text-[10px] font-bold uppercase text-earth-muted">Début</label>
+                <input type="datetime-local" [formControl]="$any(assignmentForm.get('startTime'))" class="w-full rounded-lg border border-earth-border px-3 py-2 text-sm">
+             </div>
+             <div>
+                <label class="mb-1 block text-[10px] font-bold uppercase text-earth-muted">Fin</label>
+                <input type="datetime-local" [formControl]="$any(assignmentForm.get('endTime'))" class="w-full rounded-lg border border-earth-border px-3 py-2 text-sm">
+             </div>
+          </div>
+          <button type="button" (click)="addSpecificAssignment()" class="mt-3 w-full rounded-lg bg-olive-600 py-2 text-xs text-white hover:bg-olive-700">
+            Ajouter à cette collecte
+          </button>
+        </div>
+
+        <div class="max-h-60 overflow-y-auto space-y-2">
+          <div *ngFor="let aff of specificAssignments; let i = index" class="flex items-center justify-between rounded-lg border border-earth-border p-3 text-sm">
+            <div>
+              <p class="font-medium text-earth-text">{{ resourceLabel(aff.cibleId) }}</p>
+              <p class="text-xs text-earth-muted">⏰ {{ aff.startTime | date:'shortTime' }} - {{ aff.endTime | date:'shortTime' }}</p>
+            </div>
+            <button (click)="removeSpecificAssignment(i)" class="text-red-600 hover:text-red-800">
+              <span class="material-symbols-outlined">delete</span>
+            </button>
+          </div>
+          <p *ngIf="!specificAssignments.length" class="text-center py-4 text-sm text-earth-muted italic">Aucune ressource spécifique.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-3 border-t pt-4">
+        <button (click)="closeSpecificResourcesModal()" class="rounded-lg border border-earth-border px-4 py-2 text-sm">Annuler</button>
+        <button (click)="saveSpecificResources()" class="rounded-lg bg-olive-600 px-4 py-2 text-sm text-white hover:bg-olive-700">Valider les ressources</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal: Bilan complet des ressources (Partagées + Spécifiques) ── -->
+  <div *ngIf="showSummaryModal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-lg rounded-xl border border-earth-border bg-white p-6 shadow-2xl my-auto">
+      <div class="mb-5 flex items-center justify-between">
+        <div>
+          <h3 class="text-xl font-bold text-earth-text text-olive-800">Bilan des ressources mobilisées</h3>
+          <p class="text-sm text-earth-muted">Étape : <span class="font-bold text-earth-text">{{ targetCollecteForResources?.name }}</span></p>
+        </div>
+        <button (click)="closeSummaryModal()" class="flex h-8 w-8 items-center justify-center rounded-lg text-earth-muted hover:bg-earth-bg">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-6">
+        <!-- Ressources de la Tournée (Partagées) -->
+        <div class="space-y-2">
+          <p class="text-xs font-bold uppercase tracking-wider text-earth-muted flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">groups</span> Ressources Partagées (Héritées de la tournée)
+          </p>
+          <div *ngIf="summarySharedAssignments.length; else noShared" class="grid grid-cols-1 gap-2">
+            <div *ngFor="let aff of summarySharedAssignments" class="flex items-center justify-between rounded-lg bg-olive-50/50 p-3 border border-olive-100">
+              <span class="text-sm font-medium text-olive-900">{{ resourceLabel(aff.cibleId, aff) }}</span>
+              <span class="text-xs text-olive-700 italic">Prévu : {{ aff.startTime | date:'shortTime' }}</span>
+            </div>
+          </div>
+          <ng-template #noShared>
+            <p class="text-xs text-earth-muted italic p-2">Aucune ressource partagée sur cette tournée.</p>
+          </ng-template>
+        </div>
+
+        <!-- Ressources Exceptionnelles (Spécifiques) -->
+        <div class="space-y-2">
+          <p class="text-xs font-bold uppercase tracking-wider text-earth-muted flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">stars</span> Ressources Spécifiques (À cette collecte)
+          </p>
+          <div *ngIf="targetCollecteForResources?.affectations?.length; else noSpec" class="grid grid-cols-1 gap-2">
+            <div *ngFor="let aff of targetCollecteForResources?.affectations" class="flex items-center justify-between rounded-lg bg-blue-50/50 p-3 border border-blue-100">
+              <span class="text-sm font-medium text-blue-900">{{ resourceLabel(aff.cibleId, aff) }}</span>
+              <span class="text-xs text-blue-700 italic">{{ aff.startTime | date:'shortTime' }}</span>
+            </div>
+          </div>
+          <ng-template #noSpec>
+            <p class="text-xs text-earth-muted italic p-2">Aucune ressource spécifique ajoutée.</p>
+          </ng-template>
+        </div>
+
+        <!-- Total -->
+        <div class="rounded-xl bg-earth-bg/50 p-4 border border-earth-border">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-bold text-earth-text">Total des effectifs mobilisés</p>
+            <span class="rounded-full bg-olive-600 px-3 py-1 text-xs font-bold text-white">
+              {{ summarySharedAssignments.length + (targetCollecteForResources?.affectations?.length || 0) }} ressource(s)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button (click)="closeSummaryModal()" class="rounded-lg bg-olive-600 px-6 py-2 text-sm font-bold text-white hover:bg-olive-700 shadow-sm transition-all">
+          Compris
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
+<!-- Refreshed template -->

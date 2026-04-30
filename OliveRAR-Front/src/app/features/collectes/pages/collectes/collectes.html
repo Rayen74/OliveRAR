@@ -13,10 +13,10 @@
     <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h1 class="text-3xl font-bold text-earth-text">Gestion des collectes</h1>
-        <p class="text-sm text-earth-muted">Planifiez les collectes et affectez directement les ressources.</p>
+        <p class="text-sm text-earth-muted">Planifiez les collectes et ajoutez seulement les ressources spécifiques nécessaires.</p>
       </div>
-      <div class="flex gap-2">
-        <a routerLink="/responsable/collectes/calendrier" class="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-earth-border bg-white px-4 py-2.5 text-earth-text shadow-sm transition-colors hover:bg-earth-bg">
+      <div class="flex gap-2" *ngIf="canEdit">
+        <a routerLink="/responsable/tournees/calendrier" class="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-earth-border bg-white px-4 py-2.5 text-earth-text shadow-sm transition-colors hover:bg-earth-bg">
           <span class="material-symbols-outlined text-base">calendar_month</span>
           Calendrier
         </a>
@@ -24,6 +24,12 @@
           <span class="material-symbols-outlined text-base">add</span>
           Nouvelle collecte
         </button>
+      </div>
+      <div class="flex gap-2" *ngIf="!canEdit">
+        <a routerLink="/responsable/tournees/calendrier" class="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-earth-border bg-white px-4 py-2.5 text-earth-text shadow-sm transition-colors hover:bg-earth-bg">
+          <span class="material-symbols-outlined text-base">calendar_month</span>
+          Calendrier
+        </a>
       </div>
     </header>
 
@@ -38,6 +44,11 @@
       <select [(ngModel)]="filterStatut" (change)="onFilterChange()" class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
         <option value="">Tous les statuts</option>
         <option *ngFor="let s of statuts" [value]="s">{{ formatStatut(s) }}</option>
+      </select>
+      <select [(ngModel)]="filterHasResources" (change)="onFilterChange()" class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
+        <option [ngValue]="''">Toutes les ressources</option>
+        <option [ngValue]="true">Avec ressources</option>
+        <option [ngValue]="false">Sans ressources</option>
       </select>
     </div>
 
@@ -63,20 +74,34 @@
 
         <div class="space-y-1.5 text-sm">
           <div class="text-earth-muted"><span class="font-medium text-earth-text">Chef :</span> {{ c.chefRecolteNom || '-' }}</div>
-          <div *ngIf="c.resourceAssignments?.length" class="text-earth-muted">
-            <span class="font-medium text-earth-text">Ressources :</span> {{ c.resourceAssignments?.length }}
+          <div *ngIf="c.tourneeName" class="text-earth-muted">
+            <span class="font-medium text-earth-text">Tournée :</span> {{ c.tourneeName }}
           </div>
-          <div *ngIf="!c.resourceAssignments?.length" class="text-earth-muted italic">Aucune ressource affectée</div>
+          <div *ngIf="c.inheritedAffectations?.length" class="text-earth-muted">
+            <span class="font-medium text-earth-text">Ressources héritées :</span> {{ c.inheritedAffectations?.length }}
+          </div>
+          <div *ngIf="c.affectations?.length" class="text-earth-muted">
+            <span class="font-medium text-earth-text">Ressources spécifiques :</span> {{ c.affectations?.length }}
+          </div>
+          <div *ngIf="!c.inheritedAffectations?.length && !c.affectations?.length" class="text-earth-muted italic">Aucune ressource planifiée</div>
         </div>
 
-        <div *ngIf="c.resourceAssignments?.length" class="mt-3 space-y-2">
-          <div *ngFor="let assignment of c.resourceAssignments" class="rounded-lg bg-earth-bg/60 p-3 text-sm">
-            <p class="font-medium text-earth-text">{{ assignment.unite?.codeUnique || assignment.uniteId }}</p>
+        <div *ngIf="c.inheritedAffectations?.length" class="mt-3 space-y-2">
+          <div *ngFor="let assignment of c.inheritedAffectations" class="rounded-lg border border-earth-border bg-white p-3 text-sm">
+            <p class="font-medium text-earth-text">{{ resourceLabel(assignment.cibleId, assignment) }}</p>
+            <p class="text-earth-muted">Héritée de la tournée</p>
             <p class="text-earth-muted">Créneau : {{ assignment.startTime | date:'short' }} - {{ assignment.endTime | date:'short' }}</p>
           </div>
         </div>
 
-        <div class="mt-4 flex gap-2">
+        <div *ngIf="c.affectations?.length" class="mt-3 space-y-2">
+          <div *ngFor="let assignment of c.affectations" class="rounded-lg bg-earth-bg/60 p-3 text-sm">
+            <p class="font-medium text-earth-text">{{ resourceLabel(assignment.cibleId, assignment) }}</p>
+            <p class="text-earth-muted">Créneau : {{ assignment.startTime | date:'short' }} - {{ assignment.endTime | date:'short' }}</p>
+          </div>
+        </div>
+
+        <div class="mt-4 flex gap-2" *ngIf="canEdit">
           <button (click)="startEdit(c)" class="flex h-8 w-8 items-center justify-center rounded-lg bg-olive-50 text-olive-700 transition-colors hover:bg-olive-100" title="Modifier">
             <span class="material-symbols-outlined text-base">tune</span>
           </button>
@@ -125,7 +150,7 @@
       <div class="mb-6 flex items-center justify-between">
         <div>
           <h2 class="text-xl font-bold text-earth-text">{{ editingId ? 'Modifier la collecte' : 'Nouvelle collecte' }}</h2>
-          <p class="text-sm text-earth-muted mt-1">Affectation directe des ressources à la collecte.</p>
+          <p class="text-sm text-earth-muted mt-1">Ressources spécifiques utilisées comme exception aux ressources de tournée.</p>
         </div>
         <button (click)="cancelForm()" class="flex h-8 w-8 items-center justify-center rounded-lg text-earth-muted transition-colors hover:bg-earth-bg hover:text-earth-text">
           <span class="material-symbols-outlined text-xl">close</span>
@@ -175,26 +200,32 @@
           </select>
         </div>
 
-        <div class="xl:col-span-2">
-          <p class="mb-2 text-sm font-medium text-earth-text">Ouvriers affectés à cette collecte</p>
-          <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
-            <label *ngFor="let worker of ouvriers" class="flex items-center gap-2 rounded-lg border border-earth-border p-2 text-sm">
-              <input type="checkbox" [checked]="isOuvrierSelected(worker.id)" (change)="toggleOuvrier(worker.id)">
-              {{ userLabel(worker) }}
-            </label>
+        <!-- L'affectation des ouvriers se fait désormais au niveau des tournées (ressources communes) -->
+
+        <div *ngIf="editingCollecte?.inheritedAffectations?.length" class="rounded-xl border border-earth-border bg-earth-bg/30 p-4 xl:col-span-2">
+          <div class="mb-3 flex items-center justify-between">
+            <h3 class="font-semibold text-earth-text">Ressources héritées</h3>
+            <span class="text-sm text-earth-muted">Lecture seule</span>
+          </div>
+          <div class="space-y-2">
+            <div *ngFor="let assignment of editingCollecte?.inheritedAffectations" class="rounded-lg border border-earth-border bg-white p-3 text-sm">
+              <p class="font-medium text-earth-text">{{ resourceLabel(assignment.cibleId, assignment) }}</p>
+              <p class="text-earth-muted">Héritée de {{ editingCollecte?.tourneeName || 'la tournée' }}</p>
+              <p class="text-earth-muted">Créneau : {{ assignment.startTime | date:'short' }} - {{ assignment.endTime | date:'short' }}</p>
+            </div>
           </div>
         </div>
 
         <div *ngIf="isResponsableLogistique" class="rounded-xl border border-earth-border p-4 xl:col-span-2">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="font-semibold text-earth-text">Affecter une ressource</h3>
+            <h3 class="font-semibold text-earth-text">Ressources spécifiques</h3>
             <span class="text-sm text-earth-muted">{{ currentAssignments.length }} affectation(s)</span>
           </div>
 
           <div [formGroup]="assignmentForm" class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div>
               <label class="mb-1 block text-xs font-medium text-earth-muted">Unité à affecter</label>
-              <select formControlName="uniteId" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+              <select formControlName="cibleId" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
                 <option value="">Choisir une unité</option>
                 <option *ngFor="let res of unites" [value]="res.id">
                   {{ res.codeUnique }}
@@ -211,8 +242,8 @@
             </div>
             <div>
               <label class="mb-1 block text-xs font-medium text-earth-muted">Statut de l'affectation</label>
-              <select formControlName="status" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
-                <option *ngFor="let s of assignmentStatuses" [value]="s">{{ formatStatut(s) }}</option>
+              <select formControlName="statutReservation" class="w-full rounded-lg border border-earth-border bg-white px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+                <option *ngFor="let s of assignmentstatuses" [value]="s">{{ formatStatut(s) }}</option>
               </select>
             </div>
           </div>
@@ -226,9 +257,9 @@
           <div *ngIf="currentAssignments.length" class="mt-4 space-y-2">
             <div *ngFor="let assignment of currentAssignments; let i = index" class="flex items-start justify-between rounded-lg bg-earth-bg/60 p-3 text-sm">
               <div>
-                <p class="font-medium text-earth-text">{{ resourceLabel(assignment.uniteId) }}</p>
+                <p class="font-medium text-earth-text">{{ resourceLabel(assignment.cibleId, assignment) }}</p>
                 <p class="text-earth-muted">⏰ {{ assignment.startTime | date:'short' }} - {{ assignment.endTime | date:'short' }}</p>
-                <p class="text-earth-muted">🚨 Statut : {{ formatStatut(assignment.status) }}</p>
+                <p class="text-earth-muted">🚨 Statut : {{ formatStatut(assignment.statutReservation) }}</p>
               </div>
               <button type="button" (click)="removeAssignment(i)" class="rounded-lg bg-red-50 px-3 py-1 text-red-700 transition-colors hover:bg-red-100">Retirer</button>
             </div>

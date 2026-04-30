@@ -9,25 +9,32 @@ export interface Collecte {
   latitude?: number;
   longitude?: number;
   datePrevue: string;
+  plannedStartTime?: string;
+  plannedEndTime?: string;
   chefRecolteId: string;
   chefRecolteNom?: string;
   responsableAffectationId?: string;
   responsableAffectationNom?: string;
-  equipeIds: string[];
   equipe?: { id: string; nom: string }[];
   statut: string;
-  resourceAssignments?: ResourceAssignment[];
+  tourneeId?: string | null;
+  tourneeName?: string | null;
+  inheritedAffectations?: Affectation[];
+  affectations?: Affectation[];
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export interface ResourceAssignment {
-  uniteId: string;
-  unite?: Unite;
+export interface Affectation {
+  cibleId: string;
+  typeCible: 'MACHINE' | 'HUMAIN';
+  niveau?: 'TOURNEE' | 'COLLECTE';
   startTime: string;
   endTime: string;
-  status: string;
+  statutReservation: string;
+  statutOperationnel?: string;
+  unite?: Unite;
   resource?: {
     id: string;
     name: string;

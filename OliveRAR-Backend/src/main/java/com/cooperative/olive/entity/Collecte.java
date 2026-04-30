@@ -49,7 +49,15 @@ public class Collecte {
     @NotBlank(message = "Le statut de la collecte est obligatoire.")
     private String statut = "PLANIFIEE";
 
-    private List<ResourceAssignment> resourceAssignments = new ArrayList<>();
+    private LocalDateTime plannedStartTime;
+    private LocalDateTime plannedEndTime;
+
+    /**
+     * Hybrid Approach:
+     * Collecte holds "specific/exceptional" resources that are needed ONLY for this Collecte.
+     * Common resources are inherited from the parent Tournee.
+     */
+    private List<Affectation> affectations = new ArrayList<>();
 
     /** ID of the RESPONSABLE_COOPERATIVE who created this collecte */
     private String createdBy;

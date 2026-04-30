@@ -4,15 +4,17 @@ import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, finalize, switchMap, take, tap } from 'rxjs/operators';
 import { SidebarComponent } from '../../../../shared/components/sidebar/sidebar';
-import { CollecteApiService, Collecte, ResourceAssignment, DropdownUser } from '../../../collectes/services/collecte-api.service';
+import { CollecteApiService, Collecte, Affectation, DropdownUser } from '../../../collectes/services/collecte-api.service';
 import {
   PaginatedTourneesResponse,
-  Tournee
+  Tournee,
+  TourneeCollecteSummary
 } from '../../models/tournee.model';
 import { TourneeApiService } from '../../services/tournee-api.service';
 import { Unite } from '../../../ressources/models/logistique.model';
 import { UniteApiService } from '../../../ressources/services/unite-api.service';
 import { AuthService, Role } from '../../../../auth/auth.service';
+import { ToastService } from '../../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-tournees',
@@ -24,15 +26,20 @@ export class TourneesPageComponent implements OnInit {
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
   tourneesData$: Observable<PaginatedTourneesResponse> | undefined;
 
+  // Component state
   isLoading = false;
   isSubmitting = false;
   showForm = false;
   isDeleteModalOpen = false;
+  showSpecificResourcesModal = false;
+  showSummaryModal = false;
+  targetCollecteForResources: Collecte | TourneeCollecteSummary | null = null;
+  specificAssignments: Affectation[] = [];
+  summarySharedAssignments: Affectation[] = [];
   selectedDetails: Tournee | null = null;
   editingId: string | null = null;
   deleteTarget: Tournee | null = null;
   error = '';
-  toast = { message: '', type: 'success' as 'success' | 'error', show: false };
 
   currentPage = 0;
   pageSize = 6;
@@ -40,14 +47,21 @@ export class TourneesPageComponent implements OnInit {
   totalElements = 0;
 
   get isResponsableLogistique(): boolean {
+    const role = this.authService.getConnectedUser()?.role;
+    return role === Role.RESPONSABLE_LOGISTIQUE || role === Role.RESPONSABLE_COOPERATIVE;
+  }
+
+  get canEdit(): boolean {
     return this.authService.getConnectedUser()?.role === Role.RESPONSABLE_LOGISTIQUE;
   }
 
   readonly statuses = ['PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE'];
   collectes: Collecte[] = [];
   unites: Unite[] = [];
+  dropdownUsers: DropdownUser[] = [];
   selectedCollecteIds = new Set<string>();
-  currentAssignments: ResourceAssignment[] = [];
+  currentAssignments: Affectation[] = [];
+  editingAssignmentIndex: number | null = null;
 
   filterForm: FormGroup;
   tourneeForm: FormGroup;
@@ -59,26 +73,33 @@ export class TourneesPageComponent implements OnInit {
     private readonly collecteApi: CollecteApiService,
     private readonly uniteApi: UniteApiService,
     private readonly cdr: ChangeDetectorRef,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly toastService: ToastService
   ) {
     this.filterForm = this.fb.group({
       search: [''],
-      status: ['']
+      statutReservation: ['']
     });
 
     this.tourneeForm = this.fb.group({
       name: [''],
       plannedStartTime: [''],
       plannedEndTime: [''],
-      status: ['PLANIFIEE'],
+      statutReservation: ['PLANIFIEE'],
       optimizationEnabled: [false]
     });
 
+    this.tourneeForm.get('plannedStartTime')?.valueChanges.subscribe(val => {
+      if (val && this.currentAssignments.length > 0) {
+        this.syncAssignmentDates();
+      }
+    });
+
     this.assignmentForm = this.fb.group({
-      uniteId: [''],
+      cibleId: [''],
       startTime: [''],
       endTime: [''],
-      status: ['PLANIFIEE']
+      statutReservation: ['PLANIFIEE']
     });
   }
 
@@ -95,7 +116,7 @@ export class TourneesPageComponent implements OnInit {
           this.currentPage,
           this.pageSize,
           this.filterForm.get('search')?.value,
-          this.filterForm.get('status')?.value
+          this.filterForm.get('statutReservation')?.value
         ).pipe(
           catchError(() => {
             this.error = 'Impossible de charger les tournées.';
@@ -114,6 +135,7 @@ export class TourneesPageComponent implements OnInit {
         this.totalElements = response.totalElements ?? 0;
         this.totalPages = Math.max(1, response.totalPages ?? 1);
         this.isLoading = false;
+        this.cdr.detectChanges();
       })
     );
   }
@@ -132,6 +154,11 @@ export class TourneesPageComponent implements OnInit {
       next: (res) => this.unites = res.data ?? [],
       error: () => this.unites = []
     });
+    
+    this.collecteApi.getUsersByRole('OUVRIER').pipe(take(1)).subscribe({
+      next: (res) => this.dropdownUsers = res.users ?? [],
+      error: () => this.dropdownUsers = []
+    });
   }
 
   onFilterChange(): void {
@@ -147,14 +174,14 @@ export class TourneesPageComponent implements OnInit {
       name: '',
       plannedStartTime: '',
       plannedEndTime: '',
-      status: 'PLANIFIEE',
+      statutReservation: 'PLANIFIEE',
       optimizationEnabled: false
     });
     this.assignmentForm.reset({
-      uniteId: '',
+      cibleId: '',
       startTime: '',
       endTime: '',
-      status: 'PLANIFIEE'
+      statutReservation: 'PLANIFIEE'
     });
     this.showForm = true;
   }
@@ -162,7 +189,7 @@ export class TourneesPageComponent implements OnInit {
   startEdit(tournee: Tournee): void {
     this.editingId = tournee.id ?? null;
     this.selectedCollecteIds = new Set(tournee.collecteIds ?? []);
-    this.currentAssignments = [...(tournee.resourceAssignments ?? [])];
+    this.currentAssignments = [...(tournee.affectations ?? [])];
     this.tourneeForm.patchValue({
       name: tournee.name,
       plannedStartTime: this.toDateTimeLocalValue(tournee.plannedStartTime),
@@ -181,6 +208,12 @@ export class TourneesPageComponent implements OnInit {
   }
 
   toggleCollecte(collecteId: string): void {
+    const collecte = this.collectes.find((item) => item.id === collecteId);
+    if (collecte && !this.isCollecteEligible(collecte)) {
+      this.showToast(this.collecteIneligibilityReason(collecte), 'error');
+      return;
+    }
+
     if (this.selectedCollecteIds.has(collecteId)) {
       this.selectedCollecteIds.delete(collecteId);
     } else {
@@ -192,26 +225,60 @@ export class TourneesPageComponent implements OnInit {
 
   addAssignment(): void {
     const raw = this.assignmentForm.getRawValue();
-    if (!raw.uniteId || !raw.startTime || !raw.endTime) {
+    if (!raw.cibleId || !raw.startTime || !raw.endTime) {
       this.showToast('Complétez les informations de l’affectation.', 'error');
       return;
     }
 
-    this.currentAssignments = [
-      ...this.currentAssignments,
-      {
-        uniteId: raw.uniteId,
-        startTime: new Date(raw.startTime).toISOString(),
-        endTime: new Date(raw.endTime).toISOString(),
-        status: raw.status
+    const isUser = this.dropdownUsers.some(u => u.id === raw.cibleId);
+    
+    const newAssignment: Affectation = {
+      cibleId: raw.cibleId,
+      typeCible: isUser ? 'HUMAIN' : 'MACHINE',
+      startTime: raw.startTime,
+      endTime: raw.endTime,
+      statutReservation: raw.statutReservation
+    };
+
+    if (this.editingAssignmentIndex !== null) {
+      this.currentAssignments[this.editingAssignmentIndex] = newAssignment;
+      this.editingAssignmentIndex = null;
+    } else {
+      const isDuplicate = this.currentAssignments.some(a => a.cibleId === raw.cibleId);
+      if (isDuplicate) {
+        this.showToast('Cette unité est déjà ajoutée aux ressources communes.', 'error');
+        return;
       }
-    ];
+      this.currentAssignments = [...this.currentAssignments, newAssignment];
+    }
 
     this.assignmentForm.reset({
-      uniteId: '',
+      cibleId: '',
       startTime: '',
       endTime: '',
-      status: 'PLANIFIEE'
+      statutReservation: 'PLANIFIEE'
+    });
+  }
+
+  editAssignment(index: number): void {
+    const aff = this.currentAssignments[index];
+    this.editingAssignmentIndex = index;
+    this.assignmentForm.patchValue({
+      cibleId: aff.cibleId,
+      typeCible: aff.typeCible,
+      startTime: this.toDateTimeLocalValue(aff.startTime),
+      endTime: this.toDateTimeLocalValue(aff.endTime),
+      statutReservation: aff.statutReservation
+    });
+  }
+
+  cancelEditAssignment(): void {
+    this.editingAssignmentIndex = null;
+    this.assignmentForm.reset({
+      cibleId: '',
+      startTime: '',
+      endTime: '',
+      statutReservation: 'PLANIFIEE'
     });
   }
 
@@ -227,8 +294,8 @@ export class TourneesPageComponent implements OnInit {
       this.showToast('Le nom de la tournée est obligatoire.', 'error');
       return;
     }
-    if (this.selectedCollecteIds.size < 2) {
-      this.showToast('Une tournée doit contenir au moins deux collectes.', 'error');
+    if (this.selectedCollecteIds.size < 1) {
+      this.showToast('Une tournée doit contenir au moins une collecte.', 'error');
       return;
     }
     if (!raw.plannedStartTime || !raw.plannedEndTime) {
@@ -239,12 +306,12 @@ export class TourneesPageComponent implements OnInit {
     const payload: Tournee = {
       name: raw.name.trim(),
       collecteIds: Array.from(this.selectedCollecteIds),
-      plannedStartTime: new Date(raw.plannedStartTime).toISOString(),
-      plannedEndTime: new Date(raw.plannedEndTime).toISOString(),
+      plannedStartTime: raw.plannedStartTime,
+      plannedEndTime: raw.plannedEndTime,
       datePrevue: raw.plannedStartTime?.split('T')[0],
-      status: raw.status,
+      status: raw.statutReservation,
       optimizationEnabled: !!raw.optimizationEnabled,
-      resourceAssignments: this.currentAssignments
+      affectations: this.currentAssignments
     };
 
     this.isSubmitting = true;
@@ -320,22 +387,125 @@ export class TourneesPageComponent implements OnInit {
     }
   }
 
-  formatStatus(status: string): string {
+  manageSpecificResources(collecte: Collecte): void {
+    this.targetCollecteForResources = collecte;
+    this.specificAssignments = [...(collecte.affectations ?? [])];
+    this.showSpecificResourcesModal = true;
+  }
+
+  closeSpecificResourcesModal(): void {
+    this.showSpecificResourcesModal = false;
+    this.targetCollecteForResources = null;
+  }
+
+  saveSpecificResources(): void {
+    if (!this.targetCollecteForResources?.id) return;
+    
+    // On met à jour localement les affectations de la collecte
+    const idx = this.collectes.findIndex(c => c.id === this.targetCollecteForResources?.id);
+    if (idx !== -1) {
+      this.collectes[idx].affectations = [...this.specificAssignments];
+      this.showToast(`Ressources spécifiques mises à jour pour ${this.targetCollecteForResources.name}`, 'success');
+    }
+    this.closeSpecificResourcesModal();
+  }
+
+  addSpecificAssignment(): void {
+    const raw = this.assignmentForm.getRawValue();
+    if (!raw.cibleId || !raw.startTime || !raw.endTime) {
+      this.showToast('Complétez les informations de l’affectation.', 'error');
+      return;
+    }
+    const isUser = this.dropdownUsers.some(u => u.id === raw.cibleId);
+    
+    this.specificAssignments.push({
+      cibleId: raw.cibleId,
+      typeCible: isUser ? 'HUMAIN' : 'MACHINE',
+      startTime: raw.startTime,
+      endTime: raw.endTime,
+      statutReservation: raw.statutReservation
+    });
+  }
+
+  removeSpecificAssignment(index: number): void {
+    this.specificAssignments.splice(index, 1);
+  }
+
+  private syncAssignmentDates(): void {
+    const tourneeStart = this.tourneeForm.get('plannedStartTime')?.value;
+    const tourneeEnd = this.tourneeForm.get('plannedEndTime')?.value;
+    
+    if (!tourneeStart) return;
+
+    this.currentAssignments = this.currentAssignments.map(a => ({
+      ...a,
+      startTime: tourneeStart,
+      endTime: tourneeEnd || tourneeStart
+    }));
+    
+    this.showToast('Dates des ressources communes synchronisées avec la tournée.', 'success');
+  }
+
+  formatStatus(statutReservation: string): string {
     return {
       PLANIFIEE: 'Planifiée',
       EN_COURS: 'En cours',
       TERMINEE: 'Terminée',
       ANNULEE: 'Annulée'
-    }[status] ?? status;
+    }[statutReservation] ?? statutReservation;
   }
 
   userLabel(user: DropdownUser): string {
     return `${user.prenom} ${user.nom}`;
   }
 
-  resourceLabel(uniteId: string): string {
-    const unite = this.unites.find((item) => item.id === uniteId);
-    return unite ? `${unite.codeUnique}` : uniteId;
+  collecteHasResources(collecte: Collecte): boolean {
+    return !!(collecte.inheritedAffectations?.length || collecte.affectations?.length);
+  }
+
+  isCollecteEligible(collecte: Collecte): boolean {
+    const statutReservation = (collecte.statut ?? '').toUpperCase();
+    const belongsToAnotherTournee = !!collecte.tourneeId && collecte.tourneeId !== this.editingId;
+    return !belongsToAnotherTournee && !['TERMINEE', 'ANNULEE'].includes(statutReservation);
+  }
+
+  collecteIneligibilityReason(collecte: Collecte): string {
+    const statutReservation = (collecte.statut ?? '').toUpperCase();
+    if (collecte.tourneeId && collecte.tourneeId !== this.editingId) {
+      return `La collecte ${collecte.name} appartient déjà à la tournée ${collecte.tourneeName ?? 'active'}.`;
+    }
+    if (statutReservation === 'TERMINEE' || statutReservation === 'ANNULEE') {
+      return `La collecte ${collecte.name} est ${this.formatStatus(statutReservation).toLowerCase()} et ne peut pas être ajoutée à une tournée.`;
+    }
+    return 'Cette collecte ne peut pas être ajoutée à la tournée.';
+  }
+
+  resourceLabel(cibleId: string, assignment?: any): string {
+    // 1. If we have enriched data from the backend (already formatted with code), use it
+    if (assignment?.resource?.name) {
+      return assignment.resource.name;
+    }
+
+    // 2. Fallback to local lookup for units
+    const unite = this.unites.find((item) => item.id === cibleId);
+    if (unite) return unite.codeUnique;
+    
+    // 3. Fallback to local lookup for users
+    const user = this.dropdownUsers.find(u => u.id === cibleId);
+    if (user) return `${user.prenom} ${user.nom}`;
+    
+    return cibleId;
+  }
+
+  openSummaryModal(collecte: Collecte | TourneeCollecteSummary, shared: Affectation[] = []): void {
+    this.targetCollecteForResources = collecte;
+    this.summarySharedAssignments = shared;
+    this.showSummaryModal = true;
+  }
+
+  closeSummaryModal(): void {
+    this.showSummaryModal = false;
+    this.targetCollecteForResources = null;
   }
 
   private toDateTimeLocalValue(value?: string): string {
@@ -346,11 +516,10 @@ export class TourneesPageComponent implements OnInit {
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {
-    this.toast = { message, type, show: true };
-    this.cdr.detectChanges();
-    setTimeout(() => {
-      this.toast.show = false;
-      this.cdr.detectChanges();
-    }, 2000);
+    if (type === 'success') {
+      this.toastService.success(message);
+    } else {
+      this.toastService.error(message);
+    }
   }
 }

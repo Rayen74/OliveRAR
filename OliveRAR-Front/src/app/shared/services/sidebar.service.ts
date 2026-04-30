@@ -11,8 +11,11 @@ export class SidebarService {
       { link: '/responsable/notifications', label: 'Notifications', icon: 'notifications' },
       { link: '/responsable/users', label: 'Utilisateurs', icon: 'group' },
       { link: '/responsable/collectes', label: 'Mes collectes', icon: 'event' },
-      { link: '/responsable/collectes/calendrier', label: 'Calendrier', icon: 'calendar_month' },
-      { link: '/responsable/tournees', label: 'Tournees', icon: 'route' },
+      { link: '/responsable/tournees', label: 'Tournées', icon: 'route' },
+      { link: '/responsable/tournees/calendrier', label: 'Calendrier Tournées', icon: 'calendar_month' },
+      { link: '/responsable/types-ressources', label: 'Types de ressources', icon: 'category' },
+      { link: '/responsable/unites', label: 'Unités logistiques', icon: 'precision_manufacturing' },
+      { link: '/responsable/activites', label: 'Journal d\'activité', icon: 'history_edu' },
       { link: '/responsable/profile', label: 'Mon profil', icon: 'person' }
     ],
     AGRICULTEUR: [
@@ -27,6 +30,8 @@ export class SidebarService {
       { link: '/responsable-logistique/unites', label: 'Unités', icon: 'precision_manufacturing' },
       { link: '/responsable-logistique/collectes', label: 'Collectes', icon: 'event' },
       { link: '/responsable-logistique/tournees', label: 'Tournées', icon: 'route' },
+      { link: '/responsable/tournees/calendrier', label: 'Calendrier logistique', icon: 'calendar_month' },
+      { link: '/responsable-logistique/activites', label: 'Mes activités', icon: 'history_edu' },
       { link: '/responsable-logistique/profile', label: 'Mon Profil', icon: 'person' }
     ],
     RESPONSABLE_CHEF_RECOLTE: [

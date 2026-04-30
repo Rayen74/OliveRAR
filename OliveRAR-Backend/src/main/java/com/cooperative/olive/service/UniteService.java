@@ -2,6 +2,7 @@ package com.cooperative.olive.service;
 
 import com.cooperative.olive.dao.TypeRessourceRepository;
 import com.cooperative.olive.dao.UniteRepository;
+import com.cooperative.olive.entity.ActiviteType;
 import com.cooperative.olive.entity.Role;
 import com.cooperative.olive.entity.TypeRessource;
 import com.cooperative.olive.entity.Unite;
@@ -19,11 +20,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import com.cooperative.olive.entity.Affectation;
+import com.cooperative.olive.entity.Tournee;
+import com.cooperative.olive.entity.Collecte;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +36,7 @@ public class UniteService {
     private final TypeRessourceRepository typeRessourceRepository;
     private final MongoTemplate mongoTemplate;
     private final CurrentUserService currentUserService;
+    private final ActiviteService activiteService;
 
     public Map<String, Object> getAll(int page, int size, String search,
                                        String statut, String typeId, Boolean disponible) {
@@ -63,8 +65,14 @@ public class UniteService {
         long totalElements = mongoTemplate.count(query, Unite.class);
         int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / safeSize));
         query.with(PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.ASC, "codeUnique")));
-        List<Map<String, Object>> items = mongoTemplate.find(query, Unite.class)
-                .stream().map(this::enrichUnite).toList();
+        
+        List<Unite> unites = mongoTemplate.find(query, Unite.class);
+        Set<String> occupiedIds = getCurrentlyOccupiedIds(unites.stream().map(Unite::getId).collect(Collectors.toSet()));
+        
+        List<Map<String, Object>> items = unites.stream()
+                .map(u -> enrichUnite(u, occupiedIds.contains(u.getId())))
+                .toList();
+                
         return Map.of("success", true, "items", items, "page", safePage,
                 "size", safeSize, "totalElements", totalElements, "totalPages", totalPages);
     }
@@ -101,8 +109,13 @@ public class UniteService {
         payload.setDisponibilite(true);
         payload.setHistorique(new ArrayList<>());
         appliquerAlerteMaintenance(payload);
-        ajouterHistorique(payload, "CREATION", "UnitÃ© crÃ©Ã©e.", UniteStatut.DISPONIBLE);
-        return uniteRepository.save(payload);
+        ajouterHistorique(payload, "CREATION", "Unité créée.", UniteStatut.DISPONIBLE);
+        Unite saved = uniteRepository.save(payload);
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.EQUIPEMENT_CREE, "EQUIPEMENT",
+                "Unité \"" + saved.getCodeUnique() + "\" créée.",
+                saved.getId(), saved.getCodeUnique(), Map.of());
+        return saved;
     }
 
     public List<Unite> creerMultiple(String typeId, String prefixCode, int debut, int nombre, Unite template) {
@@ -144,10 +157,10 @@ public class UniteService {
     public Unite modifier(String id, Unite payload) {
         currentUserService.requireRole(Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_COOPERATIVE);
         Unite existing = uniteRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("UnitÃ© introuvable."));
+                .orElseThrow(() -> new ResourceNotFoundException("Unité introuvable."));
         if (!existing.getCodeUnique().equals(payload.getCodeUnique())
                 && uniteRepository.existsByCodeUnique(payload.getCodeUnique())) {
-            throw new BusinessException("Le code unique " + payload.getCodeUnique() + " est dÃ©jÃ  utilisÃ©.");
+            throw new BusinessException("Le code unique " + payload.getCodeUnique() + " est déjà utilisé.");
         }
         verifierTypeExiste(payload.getTypeId());
         existing.setCodeUnique(payload.getCodeUnique().trim().toUpperCase());
@@ -160,13 +173,18 @@ public class UniteService {
             existing.setSeuilMaintenanceJours(payload.getSeuilMaintenanceJours());
         }
         appliquerAlerteMaintenance(existing);
-        return uniteRepository.save(existing);
+        Unite saved = uniteRepository.save(existing);
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.EQUIPEMENT_MODIFIE, "EQUIPEMENT",
+                "Unité \"" + saved.getCodeUnique() + "\" modifiée.",
+                saved.getId(), saved.getCodeUnique(), Map.of());
+        return saved;
     }
 
     public Unite changerStatut(String id, String nouveauStatutStr, String note) {
         currentUserService.requireRole(Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_COOPERATIVE);
         Unite unite = uniteRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("UnitÃ© introuvable."));
+                .orElseThrow(() -> new ResourceNotFoundException("Unité introuvable."));
         UniteStatut nouveauStatut;
         try {
             nouveauStatut = UniteStatut.valueOf(nouveauStatutStr.trim().toUpperCase());
@@ -175,13 +193,27 @@ public class UniteService {
         }
         if (!unite.getStatut().peutTransitionnerVers(nouveauStatut)) {
             throw new BusinessException(
-                    "Transition interdite : " + unite.getStatut().name() + " \u2192 " + nouveauStatut.name());
+                    "Transition interdite : " + unite.getStatut().name() + " → " + nouveauStatut.name());
         }
+        String ancienStatut = unite.getStatut().name();
         unite.setStatut(nouveauStatut);
         unite.setDisponibilite(nouveauStatut == UniteStatut.DISPONIBLE);
         ajouterHistorique(unite, "CHANGEMENT_STATUT",
                 (note != null && !note.isBlank()) ? note : "Changement de statut.", nouveauStatut);
-        return uniteRepository.save(unite);
+        Unite saved = uniteRepository.save(unite);
+        ActiviteType typeActivite = ActiviteType.EQUIPEMENT_STATUT_CHANGE;
+        if (nouveauStatut == UniteStatut.AFFECTE) {
+            typeActivite = ActiviteType.EQUIPEMENT_AFFECTE;
+        } else if (unite.getStatut() == UniteStatut.AFFECTE && nouveauStatut == UniteStatut.DISPONIBLE) {
+            typeActivite = ActiviteType.EQUIPEMENT_DESAFFECTE;
+        }
+
+        activiteService.enregistrerPourUtilisateurCourant(
+                typeActivite, "EQUIPEMENT",
+                "Statut unité \"" + saved.getCodeUnique() + "\" : " + ancienStatut + " → " + nouveauStatut.name(),
+                saved.getId(), saved.getCodeUnique(),
+                Map.of("ancienStatut", ancienStatut, "nouveauStatut", nouveauStatut.name()));
+        return saved;
     }
 
     public Unite desactiver(String id, String note) {
@@ -201,11 +233,15 @@ public class UniteService {
     public void supprimer(String id) {
         currentUserService.requireRole(Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_COOPERATIVE);
         Unite unite = uniteRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("UnitÃ© introuvable."));
+                .orElseThrow(() -> new ResourceNotFoundException("Unité introuvable."));
         if (unite.getStatut() != UniteStatut.HORS_SERVICE) {
-            throw new BusinessException("Seules les unitÃ©s HORS_SERVICE peuvent Ãªtre supprimÃ©es dÃ©finitivement.");
+            throw new BusinessException("Seules les unités HORS_SERVICE peuvent être supprimées définitivement.");
         }
         uniteRepository.delete(unite);
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.EQUIPEMENT_SUPPRIME, "EQUIPEMENT",
+                "Unité \"" + unite.getCodeUnique() + "\" supprimée.",
+                id, unite.getCodeUnique(), Map.of());
     }
 
     // â”€â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -266,14 +302,71 @@ public class UniteService {
         return catOk && scOk;
     }
 
+    private Set<String> getCurrentlyOccupiedIds(Set<String> candidateIds) {
+        LocalDateTime now = LocalDateTime.now();
+        Set<String> occupied = new java.util.HashSet<>();
+
+        // Check Tournees
+        Query tQuery = new Query(Criteria.where("affectations").elemMatch(
+                Criteria.where("cibleId").in(candidateIds)
+                        .and("startTime").lte(now)
+                        .and("endTime").gte(now)
+                        .and("statutReservation").in("PLANIFIEE", "CONFIRMEE", "EN_COURS")
+        ));
+        mongoTemplate.find(tQuery, Tournee.class).forEach(t -> {
+            if (t.getAffectations() != null) {
+                t.getAffectations().forEach(a -> {
+                    if (a.getStartTime() != null && a.getEndTime() != null &&
+                        a.getStartTime().isBefore(now) && a.getEndTime().isAfter(now)) {
+                        occupied.add(a.getCibleId());
+                    }
+                });
+            }
+        });
+
+        // Check Collectes
+        Query cQuery = new Query(Criteria.where("affectations").elemMatch(
+                Criteria.where("cibleId").in(candidateIds)
+                        .and("startTime").lte(now)
+                        .and("endTime").gte(now)
+                        .and("statutReservation").in("PLANIFIEE", "CONFIRMEE", "EN_COURS")
+        ));
+        mongoTemplate.find(cQuery, Collecte.class).forEach(c -> {
+            if (c.getAffectations() != null) {
+                c.getAffectations().forEach(a -> {
+                    if (a.getStartTime() != null && a.getEndTime() != null &&
+                        a.getStartTime().isBefore(now) && a.getEndTime().isAfter(now)) {
+                        occupied.add(a.getCibleId());
+                    }
+                });
+            }
+        });
+
+        return occupied;
+    }
+
     private Map<String, Object> enrichUnite(Unite unite) {
+        return enrichUnite(unite, false);
+    }
+
+    private Map<String, Object> enrichUnite(Unite unite, boolean isOccupiedNow) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", unite.getId());
         map.put("codeUnique", unite.getCodeUnique());
         map.put("typeId", unite.getTypeId());
-        map.put("statut", unite.getStatut() != null ? unite.getStatut().name() : null);
-        map.put("statutLibelle", unite.getStatut() != null ? unite.getStatut().libelle() : null);
-        map.put("disponibilite", unite.isDisponibilite());
+        
+        String currentStatut = unite.getStatut() != null ? unite.getStatut().name() : "DISPONIBLE";
+        String currentLibelle = unite.getStatut() != null ? unite.getStatut().libelle() : "Disponible";
+        
+        if (isOccupiedNow && UniteStatut.DISPONIBLE.equals(unite.getStatut())) {
+            currentStatut = "AFFECTE";
+            currentLibelle = "Affecté (En cours)";
+        }
+        
+        map.put("statut", currentStatut);
+        map.put("statutLibelle", currentLibelle);
+        map.put("isOccupiedNow", isOccupiedNow);
+        map.put("disponibilite", unite.isDisponibilite() && !isOccupiedNow);
         map.put("localisation", unite.getLocalisation());
         map.put("derniereMaintenanceDate", unite.getDerniereMaintenanceDate());
         map.put("alerteMaintenanceActive", unite.isAlerteMaintenanceActive());

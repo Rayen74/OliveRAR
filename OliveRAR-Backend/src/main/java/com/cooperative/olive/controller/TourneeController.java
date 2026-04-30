@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.cooperative.olive.entity.ResourceAssignment;
+import com.cooperative.olive.entity.Affectation;
 import com.cooperative.olive.entity.Tournee;
 import com.cooperative.olive.util.ApiResponse;
 import com.cooperative.olive.service.TourneeService;
@@ -72,7 +72,12 @@ public class TourneeController {
     }
 
     @PatchMapping("/{id}/resources")
-    public ApiResponse<Tournee> updateResources(@PathVariable String id, @RequestBody List<ResourceAssignment> resourceAssignments) {
-        return ApiResponse.success("Ressources mises à jour.", tourneeService.updateResources(id, resourceAssignments));
+    public ApiResponse<Tournee> updateResources(@PathVariable String id, @RequestBody List<Affectation> Affectations) {
+        return ApiResponse.success("Ressources mises à jour.", tourneeService.updateResources(id, Affectations));
+    }
+
+    @GetMapping("/calendar-data")
+    public ApiResponse<List<Map<String, Object>>> getCalendarData() {
+        return ApiResponse.success("Données du calendrier récupérées.", tourneeService.getCalendarData());
     }
 }

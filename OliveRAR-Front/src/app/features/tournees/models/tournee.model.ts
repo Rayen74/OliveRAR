@@ -1,4 +1,4 @@
-import { ResourceAssignment } from '../../collectes/models/collecte.model';
+import { Affectation } from '../../collectes/models/collecte.model';
 
 export interface TourneeCollecteSummary {
   id: string;
@@ -10,7 +10,10 @@ export interface TourneeCollecteSummary {
   longitude?: number;
   datePrevue?: string;
   statut?: string;
-  resourceAssignments?: ResourceAssignment[];
+  equipe?: { id: string; nom: string }[];
+  affectations?: Affectation[];
+  inheritedAffectations?: Affectation[];
+  overriddenAffectations?: Affectation[];
 }
 
 export interface Tournee {
@@ -22,7 +25,8 @@ export interface Tournee {
   plannedEndTime: string;
   optimizationEnabled?: boolean;
   status: string;
-  resourceAssignments?: ResourceAssignment[];
+  affectations?: Affectation[];
+  equipe?: { id: string; nom: string }[];
   createdAt?: string;
   updatedAt?: string;
   collectes?: TourneeCollecteSummary[];

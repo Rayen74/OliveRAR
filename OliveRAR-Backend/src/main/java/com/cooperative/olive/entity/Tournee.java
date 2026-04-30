@@ -24,14 +24,20 @@ public class Tournee {
     @NotBlank(message = "Le nom de la tournee est obligatoire.")
     private String name;
 
-    @NotEmpty(message = "Une tournee doit contenir au moins deux collectes.")
+    @NotEmpty(message = "Une tournee doit contenir au moins une collecte.")
     private List<String> collecteIds = new ArrayList<>();
 
     private LocalDate datePrevue;
     private LocalDateTime plannedStartTime;
     private LocalDateTime plannedEndTime;
     private Boolean optimizationEnabled;
-    private List<ResourceAssignment> resourceAssignments = new ArrayList<>();
+
+    /**
+     * Hybrid Approach:
+     * Tournee holds "common/shared" resources that are inherited by all its child Collectes.
+     * These resources represent the general fleet mobilized for the tour.
+     */
+    private List<Affectation> affectations = new ArrayList<>();
 
     @NotBlank(message = "Le statut de la tournee est obligatoire.")
     private String status = "PLANIFIEE";

@@ -2,19 +2,20 @@ package com.cooperative.olive.service;
 
 import com.cooperative.olive.controller.PaginatedResponse;
 import com.cooperative.olive.dao.CollecteRepository;
+import com.cooperative.olive.dao.TourneeRepository;
 import com.cooperative.olive.dao.UserRepository;
 import com.cooperative.olive.dao.VergerRepository;
+import com.cooperative.olive.entity.ActiviteType;
 import com.cooperative.olive.entity.Collecte;
-import com.cooperative.olive.entity.ResourceAssignment;
+import com.cooperative.olive.entity.Affectation;
 import com.cooperative.olive.entity.Role;
+import com.cooperative.olive.entity.Tournee;
 import com.cooperative.olive.entity.User;
 import com.cooperative.olive.entity.Verger;
 import com.cooperative.olive.exception.BusinessException;
 import com.cooperative.olive.exception.ResourceNotFoundException;
 import com.cooperative.olive.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -34,15 +35,18 @@ import java.util.stream.Collectors;
 public class CollecteService {
 
     private static final Set<String> ALLOWED_STATUTS = Set.of("PLANIFIEE", "EN_COURS", "TERMINEE", "ANNULEE");
+    private static final Set<String> ACTIVE_TOURNEE_STATUSES = Set.of("PLANIFIEE", "EN_COURS");
 
     private final CollecteRepository collecteRepository;
+    private final TourneeRepository tourneeRepository;
     private final UserRepository userRepository;
     private final VergerRepository vergerRepository;
     private final MongoTemplate mongoTemplate;
     private final CurrentUserService currentUserService;
     private final ResourceAllocationService resourceAllocationService;
+    private final ActiviteService activiteService;
 
-    public PaginatedResponse<Map<String, Object>> getAllPaginated(int page, int size, String chefRecolteId, String statut) {
+    public PaginatedResponse<Map<String, Object>> getAllPaginated(int page, int size, String chefRecolteId, String statut, Boolean hasResources) {
         currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_CHEF_RECOLTE);
 
         int safePage = Math.max(page, 0);
@@ -56,16 +60,18 @@ public class CollecteService {
             query.addCriteria(Criteria.where("statut").is(statut));
         }
 
-        long totalElements = mongoTemplate.count(query, Collecte.class);
-        int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / safeSize));
-        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "datePrevue"));
-        query.with(pageable);
-
         List<Map<String, Object>> enriched = mongoTemplate.find(query, Collecte.class).stream()
                 .map(this::enrichCollecte)
+                .filter(item -> hasResources == null || hasResources.equals(collecteHasResources(item)))
                 .collect(Collectors.toList());
 
-        return new PaginatedResponse<>(enriched, totalElements, totalPages, safePage + 1, safeSize);
+        long totalElements = enriched.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / safeSize));
+        int fromIndex = Math.min(safePage * safeSize, enriched.size());
+        int toIndex = Math.min(fromIndex + safeSize, enriched.size());
+        List<Map<String, Object>> pagedItems = enriched.subList(fromIndex, toIndex);
+
+        return new PaginatedResponse<>(pagedItems, totalElements, totalPages, safePage + 1, safeSize);
     }
 
     public Map<String, Object> getById(String id) {
@@ -85,14 +91,14 @@ public class CollecteService {
             item.put("statut", c.getStatut());
             item.put("vergerNom", resolveVergerNom(c.getVergerId()));
             item.put("chefRecolteNom", resolveUserFullName(c.getChefRecolteId()));
-            item.put("equipeSize", c.getEquipeIds() != null ? c.getEquipeIds().size() : 0);
+            item.put("equipeSize", c.getAffectations() != null ? c.getAffectations().stream().filter(a -> "HUMAIN".equals(a.getTypeCible())).count() : 0);
             return item;
         }).collect(Collectors.toList());
     }
 
     public Collecte create(Collecte collecte) {
         currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE);
-        collecte.setEquipeIds(collecte.getEquipeIds() == null ? new ArrayList<>() : collecte.getEquipeIds());
+        collecte.setStatut(collecte.getStatut() == null || collecte.getStatut().isBlank() ? "PLANIFIEE" : collecte.getStatut().trim().toUpperCase());
         collecte.setStatut(collecte.getStatut() == null || collecte.getStatut().isBlank() ? "PLANIFIEE" : collecte.getStatut().trim().toUpperCase());
 
         if (collecte.getVergerId() != null && !collecte.getVergerId().isBlank()
@@ -101,23 +107,34 @@ public class CollecteService {
         }
 
         validateCollecte(collecte);
-        List<ResourceAssignment> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
-                collecte.getResourceAssignments(), List.of(), "COLLECTE", null
+        List<Affectation> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
+                collecte.getAffectations(), List.of(), "COLLECTE", null
         );
-        resourceAllocationService.applyResourceQuantityUpdate(List.of(), normalizedAssignments);
 
         collecte.setId(null);
-        collecte.setResourceAssignments(normalizedAssignments);
+        collecte.setAffectations(normalizedAssignments);
         collecte.setCreatedBy(currentUserService.getRequiredCurrentUser().getId());
         collecte.setCreatedAt(LocalDateTime.now());
         collecte.setUpdatedAt(LocalDateTime.now());
-        return collecteRepository.save(collecte);
+        Collecte saved = collecteRepository.save(collecte);
+        resourceAllocationService.applyResourceQuantityUpdate(List.of(), normalizedAssignments);
+
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.COLLECTE_CREE, "COLLECTE",
+                "Collecte \"" + saved.getName() + "\" créée.",
+                saved.getId(), saved.getName(),
+                java.util.Map.of("statut", saved.getStatut()));
+
+        return saved;
     }
 
     public Collecte update(String id, Collecte updated) {
         currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE);
         Collecte existing = collecteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Collecte introuvable."));
+        List<Affectation> previousAssignments = existing.getAffectations() == null
+                ? List.of()
+                : new ArrayList<>(existing.getAffectations());
 
         if (updated.getVergerId() != null && !updated.getVergerId().isBlank()
                 && collecteRepository.existsByVergerIdAndIdNot(updated.getVergerId(), id)) {
@@ -125,29 +142,47 @@ public class CollecteService {
         }
 
         validateCollecte(updated);
-        List<ResourceAssignment> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
-                updated.getResourceAssignments(), existing.getResourceAssignments(), "COLLECTE", id
+        List<Affectation> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
+                updated.getAffectations(), existing.getAffectations(), "COLLECTE", id
         );
-        resourceAllocationService.applyResourceQuantityUpdate(existing.getResourceAssignments(), normalizedAssignments);
 
         existing.setName(updated.getName().trim());
         existing.setVergerId(updated.getVergerId());
         existing.setDatePrevue(updated.getDatePrevue());
         existing.setResponsableAffectationId(updated.getResponsableAffectationId());
         existing.setChefRecolteId(updated.getChefRecolteId());
-        existing.setEquipeIds(updated.getEquipeIds() != null ? updated.getEquipeIds() : new ArrayList<>());
         existing.setStatut(updated.getStatut().trim().toUpperCase());
-        existing.setResourceAssignments(normalizedAssignments);
+        existing.setStatut(updated.getStatut().trim().toUpperCase());
+        existing.setAffectations(normalizedAssignments);
         existing.setUpdatedAt(LocalDateTime.now());
-        return collecteRepository.save(existing);
+        Collecte saved = collecteRepository.save(existing);
+        resourceAllocationService.applyResourceQuantityUpdate(previousAssignments, normalizedAssignments);
+
+        ActiviteType type = ActiviteType.COLLECTE_MODIFIEE;
+        String desc = "Collecte \"" + saved.getName() + "\" modifiée.";
+        activiteService.enregistrerPourUtilisateurCourant(
+                type, "COLLECTE", desc,
+                saved.getId(), saved.getName(),
+                java.util.Map.of("statut", saved.getStatut()));
+
+        return saved;
     }
 
     public void delete(String id) {
         currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE);
         Collecte collecte = collecteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Collecte introuvable."));
-        resourceAllocationService.applyResourceQuantityUpdate(collecte.getResourceAssignments(), List.of());
+        ensureCollecteNotInActiveTournee(collecte.getId());
+        List<Affectation> removedAssignments = collecte.getAffectations() == null
+                ? List.of()
+                : new ArrayList<>(collecte.getAffectations());
         collecteRepository.delete(collecte);
+        resourceAllocationService.applyResourceQuantityUpdate(removedAssignments, List.of());
+
+        activiteService.enregistrerPourUtilisateurCourant(
+                ActiviteType.COLLECTE_SUPPRIMEE, "COLLECTE",
+                "Collecte \"" + collecte.getName() + "\" supprimée.",
+                id, collecte.getName(), java.util.Map.of());
     }
 
     private void validateCollecte(Collecte collecte) {
@@ -187,22 +222,14 @@ public class CollecteService {
             }
         }
 
-        if (collecte.getEquipeIds() != null) {
-            for (String ouvrierId : collecte.getEquipeIds()) {
-                User ouvrier = userRepository.findById(ouvrierId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Ouvrier introuvable: " + ouvrierId));
-                if (ouvrier.getRole() != Role.OUVRIER) {
-                    throw new BusinessException("Tous les membres de l'equipe doivent avoir le role OUVRIER.");
-                }
-
-                // Check if worker is already assigned to another collecte on the same day
-                boolean isBusy = collecteRepository.findAll().stream()
-                        .filter(c -> collecte.getId() == null || !c.getId().equals(collecte.getId()))
-                        .filter(c -> c.getDatePrevue().equals(collecte.getDatePrevue()))
-                        .anyMatch(c -> c.getEquipeIds() != null && c.getEquipeIds().contains(ouvrierId));
-
-                if (isBusy) {
-                    throw new BusinessException("L'ouvrier " + ouvrier.getPrenom() + " " + ouvrier.getNom() + " est deja affecté à une autre collecte pour la date du " + collecte.getDatePrevue() + ".");
+        if (collecte.getAffectations() != null) {
+            for (Affectation aff : collecte.getAffectations()) {
+                if ("HUMAIN".equals(aff.getTypeCible())) {
+                    User ouvrier = userRepository.findById(aff.getCibleId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Ouvrier introuvable: " + aff.getCibleId()));
+                    if (ouvrier.getRole() != Role.OUVRIER) {
+                        throw new BusinessException("Tous les membres de l'equipe doivent avoir le role OUVRIER.");
+                    }
                 }
             }
         }
@@ -227,12 +254,38 @@ public class CollecteService {
         map.put("chefRecolteNom", resolveUserFullName(collecte.getChefRecolteId()));
         map.put("responsableAffectationId", collecte.getResponsableAffectationId());
         map.put("responsableAffectationNom", resolveUserFullName(collecte.getResponsableAffectationId()));
-        map.put("equipeIds", collecte.getEquipeIds());
-        map.put("resourceAssignments", resourceAllocationService.enrichAssignments(collecte.getResourceAssignments()));
+        // Resolve specific vs inherited workers
+        List<String> specificOuvrierIds = collecte.getAffectations() == null ? List.of() :
+            collecte.getAffectations().stream()
+                .filter(a -> "HUMAIN".equals(a.getTypeCible()))
+                .map(Affectation::getCibleId)
+                .collect(Collectors.toList());
+
+        Tournee owningTournee = findActiveTourneeForCollecte(collecte.getId());
+        List<String> inheritedOuvrierIds = (owningTournee == null || owningTournee.getAffectations() == null) ? List.of() :
+            owningTournee.getAffectations().stream()
+                .filter(a -> "HUMAIN".equals(a.getTypeCible()))
+                .map(Affectation::getCibleId)
+                .collect(Collectors.toList());
+
+        java.util.Set<String> allOuvrierIds = new java.util.HashSet<>(specificOuvrierIds);
+        allOuvrierIds.addAll(inheritedOuvrierIds);
+        map.put("equipeIds", new ArrayList<>(allOuvrierIds));
+
+        map.put("tourneeId", owningTournee != null ? owningTournee.getId() : null);
+        map.put("tourneeName", owningTournee != null ? owningTournee.getName() : null);
+        
+        // Populate inherited resources from Tournee
+        map.put("inheritedAffectations", owningTournee == null
+                ? List.of()
+                : resourceAllocationService.enrichAssignments(owningTournee.getAffectations()));
+
+        // Populate specific resources attached to this Collecte
+        map.put("affectations", resourceAllocationService.enrichAssignments(collecte.getAffectations()));
 
         List<Map<String, String>> equipe = new ArrayList<>();
-        if (collecte.getEquipeIds() != null) {
-            for (String uid : collecte.getEquipeIds()) {
+        if (!allOuvrierIds.isEmpty()) {
+            for (String uid : allOuvrierIds) {
                 userRepository.findById(uid).ifPresent(user -> {
                     Map<String, String> member = new HashMap<>();
                     member.put("id", user.getId());
@@ -243,6 +296,35 @@ public class CollecteService {
         }
         map.put("equipe", equipe);
         return map;
+    }
+
+    private Tournee findActiveTourneeForCollecte(String collecteId) {
+        if (collecteId == null || collecteId.isBlank()) {
+            return null;
+        }
+        return tourneeRepository.findAll().stream()
+                .filter(tournee -> ACTIVE_TOURNEE_STATUSES.contains(tournee.getStatus()))
+                .filter(tournee -> tournee.getCollecteIds() != null && tournee.getCollecteIds().contains(collecteId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean collecteHasResources(Map<String, Object> collecte) {
+        Object inherited = collecte.get("inheritedAffectations");
+        Object specific = collecte.get("affectations");
+        boolean hasInherited = inherited instanceof List<?> inheritedList && !inheritedList.isEmpty();
+        boolean hasSpecific = specific instanceof List<?> specificList && !specificList.isEmpty();
+        return hasInherited || hasSpecific;
+    }
+
+    private void ensureCollecteNotInActiveTournee(String collecteId) {
+        boolean linkedToActiveTournee = tourneeRepository.findAll().stream()
+                .filter(tournee -> ACTIVE_TOURNEE_STATUSES.contains(tournee.getStatus()))
+                .anyMatch(tournee -> tournee.getCollecteIds() != null && tournee.getCollecteIds().contains(collecteId));
+
+        if (linkedToActiveTournee) {
+            throw new BusinessException("Impossible de supprimer une collecte rattachee a une tournee active.");
+        }
     }
 
     private String resolveUserFullName(String userId) {

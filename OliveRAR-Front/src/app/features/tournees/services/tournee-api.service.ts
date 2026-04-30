@@ -7,7 +7,7 @@ import {
   Tournee,
   TourneeMutationResponse
 } from '../models/tournee.model';
-import { ResourceAssignment } from '../../collectes/models/collecte.model';
+import { Affectation } from '../../collectes/models/collecte.model';
 
 @Injectable({ providedIn: 'root' })
 export class TourneeApiService {
@@ -54,7 +54,11 @@ export class TourneeApiService {
     return this.http.delete<TourneeMutationResponse>(`${this.apiUrl}/${id}/collects/${collectId}`);
   }
 
-  updateResources(id: string, resourceAssignments: ResourceAssignment[]): Observable<TourneeMutationResponse> {
-    return this.http.patch<TourneeMutationResponse>(`${this.apiUrl}/${id}/resources`, resourceAssignments);
+  updateResources(id: string, Affectations: Affectation[]): Observable<TourneeMutationResponse> {
+    return this.http.patch<TourneeMutationResponse>(`${this.apiUrl}/${id}/resources`, Affectations);
+  }
+
+  getCalendarData(): Observable<{ success: boolean; data: any[] }> {
+    return this.http.get<{ success: boolean; data: any[] }>(`${this.apiUrl}/calendar-data`);
   }
 }
