@@ -15,4 +15,5 @@ public interface CollecteRepository extends MongoRepository<Collecte, String> {
     Page<Collecte> findByCreatedBy(String createdBy, Pageable pageable);
     boolean existsByVergerId(String vergerId);
     boolean existsByVergerIdAndIdNot(String vergerId, String id);
+    List<Collecte> findByChefRecolteId(String chefRecolteId);
 }

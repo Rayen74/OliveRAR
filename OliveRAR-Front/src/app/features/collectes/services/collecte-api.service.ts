@@ -12,16 +12,6 @@ import {
   Affectation
 } from '../models/collecte.model';
 
-export type {
-  Collecte,
-  CollecteCalendarItem,
-  CollecteMutationResponse,
-  DropdownUser,
-  DropdownVerger,
-  PaginatedCollecteResponse,
-  Affectation
-} from '../models/collecte.model';
-
 @Injectable({ providedIn: 'root' })
 export class CollecteApiService {
   private readonly base = API_PREFIX;
@@ -76,5 +66,9 @@ export class CollecteApiService {
 
   updateAffectations(id: string, payload: Collecte): Observable<CollecteMutationResponse> {
     return this.http.put<CollecteMutationResponse>(`${this.base}/collectes/${id}`, payload);
+  }
+
+  getMyCollectes(): Observable<{ success: boolean; data: Collecte[] }> {
+    return this.http.get<{ success: boolean; data: Collecte[] }>(`${this.base}/collectes/my-collectes`);
   }
 }

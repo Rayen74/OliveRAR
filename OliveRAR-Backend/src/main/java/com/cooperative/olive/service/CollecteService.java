@@ -45,6 +45,13 @@ public class CollecteService {
     private final ResourceAllocationService resourceAllocationService;
     private final ActiviteService activiteService;
 
+    public List<Map<String, Object>> getByChef(String chefId) {
+        currentUserService.requireRole(Role.RESPONSABLE_CHEF_RECOLTE, Role.RESPONSABLE_COOPERATIVE);
+        return collecteRepository.findByChefRecolteId(chefId).stream()
+                .map(this::enrichCollecte)
+                .collect(Collectors.toList());
+    }
+
     public PaginatedResponse<Map<String, Object>> getAllPaginated(int page, int size, String chefRecolteId, String statut, Boolean hasResources) {
         currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_CHEF_RECOLTE);
 

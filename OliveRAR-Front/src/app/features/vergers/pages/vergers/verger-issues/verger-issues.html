@@ -35,7 +35,7 @@
   </div>
 
   <!-- Table -->
-  <div class="overflow-hidden rounded-2xl border border-earth-border bg-white shadow-sm">
+  <div class="overflow-hidden rounded-2xl border border-earth-border bg-white shadow-sm" *ngIf="issuesData$ | async as issues">
     <div *ngIf="loading" class="py-10 text-center">
       <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
       <p class="mt-2 text-sm text-earth-muted">Chargement des problèmes...</p>

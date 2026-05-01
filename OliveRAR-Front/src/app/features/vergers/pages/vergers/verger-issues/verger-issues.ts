@@ -6,6 +6,8 @@ import { VergerIssueService } from '../../../services/verger-issue.service';
 import { VergerApiService } from '../../../services/verger-api.service';
 import { Verger } from '../../../models/verger.model';
 import { User } from '../../../../../core/auth/auth.service';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-verger-issues',
@@ -19,7 +21,9 @@ export class VergerIssuesComponent implements OnInit, OnChanges {
   @Input() vergerNom: string | null = null;
   @Input() user: User | null = null;
 
-  issues: VergerIssue[] = [];
+  private refreshTrigger$ = new BehaviorSubject<void>(undefined);
+  issuesData$: Observable<VergerIssue[]> | undefined;
+
   vergers: Verger[] = [];
   loading = false;
   error = '';
@@ -56,12 +60,31 @@ export class VergerIssuesComponent implements OnInit, OnChanges {
   }
 
   ngOnInit() {
-    if (this.vergerId) {
-      this.loadIssues();
-    } else {
-      this.loadIssues();
+    if (!this.vergerId) {
       this.loadVergers();
     }
+
+    this.issuesData$ = this.refreshTrigger$.pipe(
+      tap(() => {
+        this.loading = true;
+        this.error = '';
+      }),
+      switchMap(() => {
+        const filters: any = { ...this.filters };
+        if (this.vergerId) {
+          filters.vergerId = this.vergerId;
+        }
+        return this.issueService.getAll(filters).pipe(
+          catchError(() => {
+            this.error = 'Erreur lors du chargement des problèmes.';
+            return of([]);
+          })
+        );
+      }),
+      tap(() => {
+        this.loading = false;
+      })
+    );
   }
 
   loadVergers() {
@@ -80,35 +103,17 @@ export class VergerIssuesComponent implements OnInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['vergerId'] && !changes['vergerId'].firstChange) {
-      this.loadIssues();
+      this.refreshTrigger$.next();
     }
-  }
-
-  loadIssues() {
-    this.loading = true;
-    const filters: any = { ...this.filters };
-    if (this.vergerId) {
-      filters.vergerId = this.vergerId;
-    }
-    this.issueService.getAll(filters).subscribe({
-      next: (data) => {
-        this.issues = data;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.error = 'Erreur lors du chargement des problèmes.';
-        this.loading = false;
-      }
-    });
   }
 
   applyFilters() {
-    this.loadIssues();
+    this.refreshTrigger$.next();
   }
 
   resetFilters() {
     this.filters = { statut: '', type: '', gravite: '' };
-    this.loadIssues();
+    this.refreshTrigger$.next();
   }
 
   openCreate() {
@@ -158,7 +163,7 @@ export class VergerIssuesComponent implements OnInit, OnChanges {
       next: () => {
         this.showToast(this.isEditing ? 'Problème mis à jour.' : 'Problème signalé.', 'success');
         this.closeModal();
-        this.loadIssues();
+        this.refreshTrigger$.next();
       },
       error: (err) => {
         this.showToast(err?.error?.message || 'Erreur lors de l\'enregistrement.', 'error');
@@ -177,7 +182,7 @@ export class VergerIssuesComponent implements OnInit, OnChanges {
       next: () => {
         this.showToast('Problème supprimé.', 'success');
         this.showDeleteModal = false;
-        this.loadIssues();
+        this.refreshTrigger$.next();
       },
       error: () => {
         this.showToast('Erreur suppression.', 'error');
@@ -190,8 +195,8 @@ export class VergerIssuesComponent implements OnInit, OnChanges {
     const updatedIssue = { ...issue, statut: newStatut as any };
     this.issueService.update(issue.id!, updatedIssue).subscribe({
       next: () => {
-        this.showToast('Statut mis à jour.', 'success');
-        this.loadIssues();
+        this.refreshTrigger$.next();
+        this.toast = { message: 'Statut mis à jour', type: 'success', show: true };
       },
       error: (err) => {
         this.showToast(err?.error?.message || 'Transition impossible.', 'error');

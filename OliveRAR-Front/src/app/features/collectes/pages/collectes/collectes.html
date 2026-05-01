@@ -9,7 +9,7 @@
 
   <app-sidebar></app-sidebar>
 
-  <main class="flex-1 p-8" *ngIf="collectesData$ | async as data">
+  <main class="flex-1 p-8">
     <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h1 class="text-3xl font-bold text-earth-text">Gestion des collectes</h1>
@@ -60,7 +60,7 @@
     </div>
 
     <div *ngIf="!isLoading" class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-      <div *ngFor="let c of data.items" class="rounded-xl border border-earth-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div *ngFor="let c of collectes" class="rounded-xl border border-earth-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
         <div class="mb-3 flex items-start justify-between gap-3">
           <div class="min-w-0">
             <p class="truncate font-semibold text-earth-text">{{ c.name }}</p>
@@ -111,12 +111,12 @@
         </div>
       </div>
 
-      <div *ngIf="data.items.length === 0 && !isLoading" class="col-span-full rounded-xl border-2 border-dashed border-earth-border py-14 text-center text-earth-muted">
+      <div *ngIf="collectes.length === 0" class="col-span-full rounded-xl border-2 border-dashed border-earth-border py-14 text-center text-earth-muted">
         Aucune collecte pour le moment.
       </div>
     </div>
 
-    <div *ngIf="!isLoading && data.items.length > 0" class="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+    <div *ngIf="!isLoading && collectes.length > 0" class="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
       <p class="text-sm text-earth-muted">Page <span class="font-medium text-earth-text">{{ currentPage + 1 }}</span> sur {{ totalPages }} — {{ totalItems }} au total</p>
       <div class="flex items-center gap-2">
         <button (click)="previousPage()" [disabled]="currentPage === 0" class="inline-flex items-center gap-1 rounded-lg border border-earth-border bg-white px-4 py-2 text-sm transition-colors hover:bg-gray-50 disabled:opacity-50">

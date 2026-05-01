@@ -61,4 +61,8 @@ export class TourneeApiService {
   getCalendarData(): Observable<{ success: boolean; data: any[] }> {
     return this.http.get<{ success: boolean; data: any[] }>(`${this.apiUrl}/calendar-data`);
   }
+
+  getMyTours(): Observable<{ success: boolean; data: Tournee[] }> {
+    return this.http.get<{ success: boolean; data: Tournee[] }>(`${this.apiUrl}/my-tours`);
+  }
 }

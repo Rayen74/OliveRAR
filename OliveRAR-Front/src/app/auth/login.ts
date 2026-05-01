@@ -144,11 +144,11 @@ export class LoginComponent {
               break;
 
             case Role.RESPONSABLE_LOGISTIQUE:
-              redirectPath = '/responsable-logistique/types-ressources';
+              redirectPath = '/responsable-logistique/tournees';
               break;
 
             case Role.RESPONSABLE_CHEF_RECOLTE:
-              redirectPath = '/responsable-chef-recolte/profile';   // ← Important
+              redirectPath = '/chef-recolte/tours';
               break;
 
             default:

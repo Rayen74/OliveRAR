@@ -1,17 +1,17 @@
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, FormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
-import { catchError, finalize, switchMap, take, tap } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { catchError, finalize, take } from 'rxjs/operators';
 import { SidebarComponent } from '../../../../shared/components/sidebar/sidebar';
+import { CollecteApiService } from '../../services/collecte-api.service';
 import {
   Collecte,
-  CollecteApiService,
   CollecteMutationResponse,
   DropdownUser,
   DropdownVerger,
   PaginatedCollecteResponse,
   Affectation
-} from '../../services/collecte-api.service';
+} from '../../models/collecte.model';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Unite } from '../../../ressources/models/logistique.model';
@@ -26,8 +26,8 @@ import { AuthService, Role } from '../../../../core/auth/auth.service';
   styleUrl: './collectes.css',
 })
 export class CollectesComponent implements OnInit, OnDestroy {
-  private refreshTrigger$ = new BehaviorSubject<void>(undefined);
-  collectesData$: Observable<PaginatedCollecteResponse> | undefined;
+  // Direct state — no async pipe, guaranteed to load on first navigation
+  collectes: Collecte[] = [];
   private readonly destroy$ = new Subject<void>();
 
   get todayDate(): string {
@@ -100,7 +100,9 @@ export class CollectesComponent implements OnInit, OnDestroy {
   }
 
   private futureDateValidator(control: AbstractControl): ValidationErrors | null {
-    if (!control.value) return null;
+    if (!control.value) {
+      return null;
+    }
     const selected = new Date(control.value);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -112,35 +114,28 @@ export class CollectesComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadDropdowns();
+    this.loadCollectes();
+  }
 
-    this.collectesData$ = this.refreshTrigger$.pipe(
-      tap(() => {
-        this.isLoading = true;
-        this.error = '';
-      }),
-      switchMap(() =>
-        this.collecteApi.getAll(this.currentPage, this.pageSize, this.filterChefId, this.filterStatut, this.filterHasResources).pipe(
-          catchError(() => {
-            this.error = 'Impossible de charger les collectes.';
-            return of({
-              items: [],
-              totalItems: 0,
-              totalPages: 1,
-              page: 0,
-              limit: this.pageSize,
-              hasNext: false,
-              hasPrevious: false
-             } as PaginatedCollecteResponse);
-          }),
-        ),
-      ),
-      tap((res: PaginatedCollecteResponse) => {
-        this.totalItems = res.totalItems ?? 0;
-        this.totalPages = Math.max(1, res.totalPages ?? 1);
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }),
-    );
+  private loadCollectes(): void {
+    this.isLoading = true;
+    this.error = '';
+    this.collecteApi.getAll(this.currentPage, this.pageSize, this.filterChefId, this.filterStatut, this.filterHasResources)
+      .pipe(take(1))
+      .subscribe({
+        next: (res) => {
+          this.collectes = res.items ?? [];
+          this.totalItems = res.totalItems ?? 0;
+          this.totalPages = Math.max(1, res.totalPages ?? 1);
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.error = 'Impossible de charger les collectes.';
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -150,7 +145,7 @@ export class CollectesComponent implements OnInit, OnDestroy {
 
   onFilterChange(): void {
     this.currentPage = 0;
-    this.refreshTrigger$.next();
+    this.loadCollectes();
   }
 
   private loadDropdowns(): void {
@@ -307,7 +302,7 @@ export class CollectesComponent implements OnInit, OnDestroy {
         if (res.success) {
           this.showToast(res.message, 'success');
           this.cancelForm();
-          this.refreshTrigger$.next();
+          this.loadCollectes();
         }
       },
       error: (err) => {
@@ -335,7 +330,7 @@ export class CollectesComponent implements OnInit, OnDestroy {
         if (this.currentPage > 0 && this.totalItems - 1 <= this.currentPage * this.pageSize) {
           this.currentPage--;
         }
-        this.refreshTrigger$.next();
+        this.loadCollectes();
       },
       error: () => this.showToast('Erreur lors de la suppression.', 'error'),
     });
@@ -344,14 +339,14 @@ export class CollectesComponent implements OnInit, OnDestroy {
   nextPage(): void {
     if (this.currentPage < this.totalPages - 1) {
       this.currentPage++;
-      this.refreshTrigger$.next();
+      this.loadCollectes();
     }
   }
 
   previousPage(): void {
     if (this.currentPage > 0) {
       this.currentPage--;
-      this.refreshTrigger$.next();
+      this.loadCollectes();
     }
   }
 

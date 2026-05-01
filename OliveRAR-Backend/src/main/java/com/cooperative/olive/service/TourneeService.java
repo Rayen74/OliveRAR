@@ -82,6 +82,19 @@ public class TourneeService {
                 "totalPages", totalPages);
     }
 
+    public List<Map<String, Object>> getTourneesForChef(String chefId) {
+        // Find all collectes assigned to this chef
+        List<String> assignedCollecteIds = collecteRepository.findByChefRecolteId(chefId).stream()
+                .map(Collecte::getId)
+                .toList();
+        
+        // Find all tournees that contain at least one of these collectes
+        return tourneeRepository.findAll().stream()
+                .filter(t -> t.getCollecteIds() != null && t.getCollecteIds().stream().anyMatch(assignedCollecteIds::contains))
+                .map(this::toSummary)
+                .toList();
+    }
+
     private Map<String, Object> toSummary(Tournee t) {
         return Map.of(
                 "id", t.getId(),

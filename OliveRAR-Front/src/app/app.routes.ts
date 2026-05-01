@@ -129,18 +129,22 @@ export const routes: Routes = [
         path: 'profile',
         loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
       },
-      { path: '', redirectTo: 'types-ressources', pathMatch: 'full' },
+      { path: '', redirectTo: 'tournees', pathMatch: 'full' },
     ]
   },
   {
-    path: 'responsable-chef-recolte',
+    path: 'chef-recolte',
     canActivate: [authGuard, responsableChefRecolteGuard],
     children: [
+      {
+        path: 'tours',
+        loadComponent: () => import('./features/tournees/pages/chef-recolte-tours/chef-recolte-tours').then(m => m.ChefRecolteToursComponent)
+      },
       {
         path: 'profile',
         loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
       },
-      { path: '', redirectTo: 'profile', pathMatch: 'full' },
+      { path: '', redirectTo: 'tours', pathMatch: 'full' },
     ]
   },
   { path: '**', redirectTo: 'login' }

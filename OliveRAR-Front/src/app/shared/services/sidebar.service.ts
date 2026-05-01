@@ -35,7 +35,8 @@ export class SidebarService {
       { link: '/responsable-logistique/profile', label: 'Mon Profil', icon: 'person' }
     ],
     RESPONSABLE_CHEF_RECOLTE: [
-      { link: '/responsable-chef-recolte/profile', label: 'Mon Profil', icon: 'person' }
+      { link: '/chef-recolte/tours', label: 'Mes Tournées', icon: 'route' },
+      { link: '/chef-recolte/profile', label: 'Mon Profil', icon: 'person' }
     ]
   };
 

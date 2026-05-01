@@ -1,0 +1,205 @@
+<div class="flex min-h-screen bg-[#fcfbf9]">
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-4 lg:p-8" *ngIf="collectesData$ | async as data">
+    <div class="max-w-7xl mx-auto">
+      <!-- Header -->
+      <header class="mb-6">
+        <h1 class="text-4xl font-black text-stone-900 tracking-tight">Mes Collectes</h1>
+        <p class="text-stone-500 mt-2 font-medium">Assignations directes par verger et suivi terrain.</p>
+      </header>
+
+      <!-- Filter Form -->
+      <form [formGroup]="filterForm" class="mb-10 flex flex-wrap items-center gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <div class="flex items-center gap-2 text-sm font-medium text-stone-700">
+          <span class="material-symbols-outlined text-stone-400">filter_list</span> Filtrer par :
+        </div>
+        
+        <select
+          formControlName="searchStatut"
+          (change)="onFilterChange()"
+          class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 outline-none focus:border-[#4a7c2c] focus:ring-1 focus:ring-[#4a7c2c]"
+        >
+          <option value="">Tous les statuts</option>
+          <option value="EN_ATTENTE">En attente</option>
+          <option value="EN_COURS">En cours</option>
+          <option value="TERMINEE">Terminée</option>
+          <option value="ANNULEE">Annulée</option>
+        </select>
+      </form>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20">
+        <div class="w-12 h-12 border-4 border-stone-200 border-t-[#4a7c2c] rounded-full animate-spin mb-4"></div>
+        <p class="text-stone-400 font-medium">Chargement de vos collectes...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && (!data.items || data.items.length === 0)" class="bg-white rounded-[2.5rem] p-12 text-center border border-stone-100 shadow-sm">
+        <div class="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <span class="material-symbols-outlined text-stone-300 text-4xl">inventory_2</span>
+        </div>
+        <h3 class="text-xl font-bold text-stone-800">Aucune collecte assignée</h3>
+        <p class="text-stone-500 mt-2 max-w-md mx-auto">
+          Vous n'avez pas encore de collectes assignées pour aujourd'hui.
+        </p>
+      </div>
+
+      <!-- Collectes Grid -->
+      <div *ngIf="!isLoading && data.items && data.items.length > 0" class="tours-grid">
+        <div *ngFor="let collecte of data.items" class="tour-card">
+          <div class="flex justify-between items-start mb-6">
+            <span class="statut-badge" [ngClass]="'statut-' + collecte.statut.toLowerCase()">
+              {{ collecte.statut }}
+            </span>
+            <span class="text-stone-400 text-xs font-bold">{{ collecte.datePrevue | date:'dd MMM yyyy' }}</span>
+          </div>
+
+          <h3 class="text-xl font-black text-stone-900 mb-1">{{ collecte.vergerNom }}</h3>
+          <p class="text-stone-400 text-xs font-bold mb-4 flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm">location_on</span>
+            {{ collecte.localisation }}
+          </p>
+          
+          <div class="space-y-3 mb-8">
+            <div class="flex items-center gap-3 text-stone-600 text-sm">
+              <span class="material-symbols-outlined text-stone-400 text-lg">route</span>
+              <span class="font-bold">{{ collecte.tourneeName || 'Hors Tournée' }}</span>
+            </div>
+            <div class="flex items-center gap-3 text-stone-600 text-sm">
+              <span class="material-symbols-outlined text-stone-400 text-lg">group</span>
+              <span>{{ getWorkerCount(collecte) }} ouvriers assignés</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button (click)="openHarvestModal(collecte)" class="action-btn btn-primary">
+              <span class="material-symbols-outlined text-lg">inventory_2</span>
+              Récolte
+            </button>
+            <button (click)="downloadReport(collecte)" class="action-btn btn-secondary">
+              <span class="material-symbols-outlined text-lg">description</span>
+              Rapport
+            </button>
+          </div>
+        </div>
+      </div>
+
+      
+      <!-- Pagination Controls -->
+      <div *ngIf="!isLoading && data.items.length > 0" class="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <p class="text-sm text-stone-500 font-medium">Page <span class="font-bold text-stone-900">{{ currentPage + 1 }}</span> sur {{ totalPages }} — {{ totalElements }} au total</p>
+        <div class="flex items-center gap-2">
+          <button (click)="previousPage()" [disabled]="currentPage === 0" class="inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-50">
+            <span class="material-symbols-outlined text-sm">chevron_left</span>
+            Précédent
+          </button>
+          <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1" class="inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-50">
+            Suivant
+            <span class="material-symbols-outlined text-sm">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Récolte -->
+<div *ngIf="showModal" class="modal-overlay">
+  <div class="modal-content p-8">
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h2 class="text-2xl font-black text-stone-900">Enregistrer la Récolte</h2>
+        <p class="text-sm text-stone-500">{{ selectedCollecte?.vergerNom }} ({{ selectedCollecte?.name }})</p>
+      </div>
+      <button (click)="closeModal()" class="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center hover:bg-stone-100 transition-colors">
+        <span class="material-symbols-outlined text-stone-600">close</span>
+      </button>
+    </div>
+
+    <!-- Tabs/Steps -->
+    <div *ngIf="steps" class="flex gap-4 mb-8">
+      <button *ngFor="let step of steps" 
+              (click)="activeStep = step"
+              [class.bg-[#4a7c2c]]="activeStep === step"
+              [class.text-white]="activeStep === step"
+              class="flex-1 py-2 rounded-xl text-sm font-bold transition-all border border-stone-100">
+        {{ step }}
+      </button>
+    </div>
+
+    <!-- Step 1: Production -->
+    <div *ngIf="activeStep === 'Production'" class="space-y-6">
+      <div class="bg-stone-50 p-6 rounded-3xl">
+        <label class="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Quantité récoltée (Kg)</label>
+        <div class="flex items-center gap-4">
+          <input type="number" [(ngModel)]="harvestData.quantiteOliveKg" 
+                 class="flex-1 bg-white border-2 border-stone-100 rounded-2xl px-4 py-3 text-2xl font-black text-[#4a7c2c] focus:border-[#4a7c2c] outline-none"
+                 placeholder="0.00">
+          <span class="text-xl font-bold text-stone-400">KG</span>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Notes globales</label>
+        <textarea [(ngModel)]="harvestData.notesGlobales" 
+                  class="w-full bg-stone-50 border-2 border-transparent rounded-2xl p-4 min-h-[120px] focus:bg-white focus:border-stone-100 outline-none transition-all"
+                  placeholder="Incidents, météo, remarques particulières..."></textarea>
+      </div>
+    </div>
+
+    <!-- Step 2: Attendance -->
+    <div *ngIf="activeStep === 'Présences'" class="space-y-4">
+      <div class="attendance-row border-b border-stone-50 pb-2 mb-2">
+        <span class="text-xs font-bold text-stone-400 uppercase">Ouvrier</span>
+        <span class="text-xs font-bold text-stone-400 uppercase text-center">Heure</span>
+        <span class="text-xs font-bold text-stone-400 uppercase text-right">Statut</span>
+      </div>
+      <div *ngFor="let worker of (harvestData.attendance || [])" class="attendance-row">
+        <span class="font-bold text-stone-800 text-sm">{{ worker.workerName }}</span>
+        <input type="time" [(ngModel)]="worker.heureTime" class="bg-stone-50 border-none rounded-lg p-1 text-xs outline-none">
+        <div class="flex justify-end gap-1">
+          <button (click)="worker.statut = AttendanceStatus.PRESENT" [class.active]="worker.statut === AttendanceStatus.PRESENT" class="presence-btn border-green-50 text-green-600">P</button>
+          <button (click)="worker.statut = AttendanceStatus.ABSENT" [class.active]="worker.statut === AttendanceStatus.ABSENT" class="presence-btn absence-btn border-red-50 text-red-600">A</button>
+          <button (click)="worker.statut = AttendanceStatus.RETARD" [class.active]="worker.statut === AttendanceStatus.RETARD" class="presence-btn retard-btn border-amber-50 text-amber-500">R</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Material -->
+    <div *ngIf="activeStep === 'Matériel'" class="space-y-4">
+      <div *ngFor="let check of harvestData.resourceChecks" class="bg-stone-50 p-6 rounded-3xl">
+        <div class="flex justify-between items-center mb-4">
+          <h4 class="font-black text-stone-800">{{ check.label }}</h4>
+          <span [class.text-green-600]="isCheckOk(check)" [class.text-red-600]="!isCheckOk(check)" class="text-xs font-bold">
+            {{ isCheckOk(check) ? 'OPÉRATIONNEL' : 'INCOMPLET' }}
+          </span>
+        </div>
+        <div class="space-y-2">
+          <div *ngFor="let item of check.items" class="checklist-item" [class.checked]="item.checked">
+            <span class="text-sm font-medium" [class.text-stone-400]="item.checked">{{ item.label }}</span>
+            <input type="checkbox" [(ngModel)]="item.checked">
+          </div>
+        </div>
+        <div class="mt-4" *ngIf="!isCheckOk(check)">
+          <input type="text" [(ngModel)]="check.noteIncident" 
+                 class="w-full bg-white border border-red-100 rounded-xl px-3 py-2 text-xs text-red-600 outline-none"
+                 placeholder="Décrire le problème...">
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-10 pt-6 border-t border-stone-50 flex gap-4">
+      <button (click)="closeModal()" class="flex-1 py-3 rounded-2xl font-bold text-stone-400 hover:bg-stone-50 transition-colors">
+        Annuler
+      </button>
+      <button (click)="saveHarvest()" [disabled]="isSubmitting" class="flex-[2] py-3 rounded-2xl bg-[#4a7c2c] text-white font-bold shadow-lg shadow-green-900/20 hover:bg-[#3d6624] disabled:opacity-50 transition-all">
+        <span *ngIf="!isSubmitting">Finaliser & Enregistrer</span>
+        <span *ngIf="isSubmitting" class="flex items-center justify-center gap-2">
+          <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          Traitement...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

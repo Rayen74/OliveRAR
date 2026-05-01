@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.cooperative.olive.entity.Affectation;
 import com.cooperative.olive.entity.Tournee;
+import com.cooperative.olive.security.CurrentUserService;
 import com.cooperative.olive.util.ApiResponse;
 import com.cooperative.olive.service.TourneeService;
 
@@ -30,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class TourneeController {
 
     private final TourneeService tourneeService;
+    private final CurrentUserService currentUserService;
 
     @GetMapping
     public Map<String, Object> getAll(
@@ -38,6 +40,12 @@ public class TourneeController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status) {
         return tourneeService.getAll(page, size, search, status);
+    }
+
+    @GetMapping("/my-tours")
+    public ApiResponse<List<Map<String, Object>>> getMyTours() {
+        String chefId = currentUserService.getRequiredCurrentUser().getId();
+        return ApiResponse.success("Vos tournées ont été récupérées.", tourneeService.getTourneesForChef(chefId));
     }
 
     @GetMapping("/{id}")

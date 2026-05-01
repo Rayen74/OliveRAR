@@ -1,10 +1,10 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { catchError, finalize, switchMap, take, tap } from 'rxjs/operators';
+import { finalize, take } from 'rxjs/operators';
 import { SidebarComponent } from '../../../../shared/components/sidebar/sidebar';
-import { CollecteApiService, Collecte, Affectation, DropdownUser } from '../../../collectes/services/collecte-api.service';
+import { CollecteApiService } from '../../../collectes/services/collecte-api.service';
+import { Collecte, Affectation, DropdownUser } from '../../../collectes/models/collecte.model';
 import {
   PaginatedTourneesResponse,
   Tournee,
@@ -23,8 +23,11 @@ import { ToastService } from '../../../../shared/services/toast.service';
   templateUrl: './tournees.html'
 })
 export class TourneesPageComponent implements OnInit {
-  private refreshTrigger$ = new BehaviorSubject<void>(undefined);
-  tourneesData$: Observable<PaginatedTourneesResponse> | undefined;
+onFilterChange() {
+throw new Error('Method not implemented.');
+}
+  // Direct state — no async pipe, guaranteed to load on first navigation
+  tournees: Tournee[] = [];
 
   // Component state
   isLoading = false;
@@ -103,43 +106,36 @@ export class TourneesPageComponent implements OnInit {
       endTime: [''],
       statutReservation: ['PLANIFIEE']
     });
+
   }
 
   ngOnInit(): void {
     this.loadDependencies();
+    this.loadTournees();
+  }
 
-    this.tourneesData$ = this.refreshTrigger$.pipe(
-      tap(() => {
-        this.isLoading = true;
-        this.error = '';
-      }),
-      switchMap(() =>
-        this.tourneeApi.getAll(
-          this.currentPage,
-          this.pageSize,
-          this.filterForm.get('search')?.value,
-          this.filterForm.get('statutReservation')?.value
-        ).pipe(
-          catchError(() => {
-            this.error = 'Impossible de charger les tournées.';
-            return of({
-              success: false,
-              items: [],
-              page: 0,
-              size: this.pageSize,
-              totalElements: 0,
-              totalPages: 1
-            } as PaginatedTourneesResponse);
-          })
-        )
-      ),
-      tap((response) => {
+  private loadTournees(): void {
+    this.isLoading = true;
+    this.error = '';
+    this.tourneeApi.getAll(
+      this.currentPage,
+      this.pageSize,
+      this.filterForm.get('search')?.value,
+      this.filterForm.get('statutReservation')?.value
+    ).pipe(take(1)).subscribe({
+      next: (response) => {
+        this.tournees = response.items ?? [];
         this.totalElements = response.totalElements ?? 0;
         this.totalPages = Math.max(1, response.totalPages ?? 1);
         this.isLoading = false;
         this.cdr.detectChanges();
-      })
-    );
+      },
+      error: () => {
+        this.error = 'Impossible de charger les tournées.';
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   loadDependencies(): void {
@@ -163,10 +159,7 @@ export class TourneesPageComponent implements OnInit {
     });
   }
 
-  onFilterChange(): void {
-    this.currentPage = 0;
-    this.refreshTrigger$.next();
-  }
+
 
   openCreateForm(): void {
     this.editingId = null;
@@ -357,7 +350,7 @@ export class TourneesPageComponent implements OnInit {
         if (response.success) {
           this.showToast(response.message, 'success');
           this.cancelForm();
-          this.refreshTrigger$.next();
+          this.loadTournees();
         }
       },
       error: (err) => this.showToast(err?.error?.message ?? 'Une erreur est survenue.', 'error')
@@ -400,7 +393,7 @@ export class TourneesPageComponent implements OnInit {
       next: (response) => {
         this.showToast(response.message, 'success');
         this.cancelDelete();
-        this.refreshTrigger$.next();
+        this.loadTournees();
       },
       error: (err) => this.showToast(err?.error?.message ?? 'Erreur lors de la suppression.', 'error')
     });
@@ -409,16 +402,17 @@ export class TourneesPageComponent implements OnInit {
   nextPage(): void {
     if (this.currentPage < this.totalPages - 1) {
       this.currentPage++;
-      this.refreshTrigger$.next();
+      this.loadTournees();
     }
   }
 
   previousPage(): void {
     if (this.currentPage > 0) {
       this.currentPage--;
-      this.refreshTrigger$.next();
+      this.loadTournees();
     }
   }
+
 
   manageSpecificResources(collecte: Collecte): void {
     this.targetCollecteForResources = collecte;
