@@ -184,48 +184,72 @@
               </div>
 
               <ng-container *ngIf="selectedVerger; else emptySelection">
-                <app-verger-map
-                  [markers]="hasValidCoordinates(selectedVerger) ? [{ id: selectedVerger.id || selectedVerger.nom, title: selectedVerger.nom, subtitle: selectedVerger.localisation, latitude: selectedVerger.latitude, longitude: selectedVerger.longitude }] : []"
-                  [selectedMarkerId]="selectedVerger.id || selectedVerger.nom" [interactive]="false" [mapHeight]="210"
-                  emptyMessage="Ajoutez une position pour afficher ce verger sur la carte.">
-                </app-verger-map>
-
-                <div
-                  class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-2xl border border-earth-border bg-earth-bg px-3 py-3 text-[13px]">
-                  <span class="text-earth-muted">Type d'olive</span>
-                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.typeOlive || 'N/A'
-                    }}</span>
-
-                  <span class="text-earth-muted">Arbres</span>
-                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.nombreArbres
-                    }}</span>
-
-                  <span class="text-earth-muted">Surface</span>
-                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.superficie }}
-                    ha</span>
-
-                  <span class="text-earth-muted">Rendement estimé</span>
-                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.rendementEstime }}
-                    kg</span>
-
-                  <span class="text-earth-muted">Latitude</span>
-                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.latitude || 'N/A'
-                    }}</span>
-
-                  <span class="text-earth-muted">Longitude</span>
-                  <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.longitude || 'N/A'
-                    }}</span>
+                <!-- Tabs -->
+                <div class="flex border-b border-earth-border">
+                  <button (click)="activeTab = 'details'"
+                    [ngClass]="activeTab === 'details' ? 'border-olive-600 text-olive-600' : 'border-transparent text-earth-muted'"
+                    class="flex-1 border-b-2 px-3 py-2 text-sm font-medium transition-colors hover:text-olive-500">
+                    Détails
+                  </button>
+                  <button (click)="activeTab = 'issues'"
+                    [ngClass]="activeTab === 'issues' ? 'border-olive-600 text-olive-600' : 'border-transparent text-earth-muted'"
+                    class="flex-1 border-b-2 px-3 py-2 text-sm font-medium transition-colors hover:text-olive-500">
+                    Problèmes
+                  </button>
                 </div>
 
-                <div *ngIf="isAgriculteur" class="flex gap-2">
-                  <button (click)="openEdit(selectedVerger)"
-                    class="flex-1 rounded-xl border border-earth-border px-3 py-2 text-sm font-medium text-earth-text transition-colors hover:bg-earth-bg">
-                    Modifier
-                  </button>
-                  <button (click)="confirmDelete(selectedVerger)"
-                    class="flex-1 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-50">
-                    Supprimer
-                  </button>
+                <div class="py-4">
+                  <!-- Details Tab -->
+                  <div *ngIf="activeTab === 'details'" class="space-y-3">
+                    <app-verger-map
+                      [markers]="hasValidCoordinates(selectedVerger) ? [{ id: selectedVerger.id || selectedVerger.nom, title: selectedVerger.nom, subtitle: selectedVerger.localisation, latitude: selectedVerger.latitude, longitude: selectedVerger.longitude }] : []"
+                      [selectedMarkerId]="selectedVerger.id || selectedVerger.nom" [interactive]="false" [mapHeight]="210"
+                      emptyMessage="Ajoutez une position pour afficher ce verger sur la carte.">
+                    </app-verger-map>
+
+                    <div
+                      class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-2xl border border-earth-border bg-earth-bg px-3 py-3 text-[13px]">
+                      <span class="text-earth-muted">Type d'olive</span>
+                      <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.typeOlive || 'N/A'
+                        }}</span>
+
+                      <span class="text-earth-muted">Arbres</span>
+                      <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.nombreArbres
+                        }}</span>
+
+                      <span class="text-earth-muted">Surface</span>
+                      <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.superficie }}
+                        ha</span>
+
+                      <span class="text-earth-muted">Rendement estimé</span>
+                      <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.rendementEstime }}
+                        kg</span>
+
+                      <span class="text-earth-muted">Latitude</span>
+                      <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.latitude || 'N/A'
+                        }}</span>
+
+                      <span class="text-earth-muted">Longitude</span>
+                      <span class="truncate text-right font-semibold text-earth-text">{{ selectedVerger.longitude || 'N/A'
+                        }}</span>
+                    </div>
+
+                    <div *ngIf="isAgriculteur" class="flex gap-2">
+                      <button (click)="openEdit(selectedVerger)"
+                        class="flex-1 rounded-xl border border-earth-border px-3 py-2 text-sm font-medium text-earth-text transition-colors hover:bg-earth-bg">
+                        Modifier
+                      </button>
+                      <button (click)="confirmDelete(selectedVerger)"
+                        class="flex-1 rounded-xl border border-red-200 px-3 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-50">
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Issues Tab -->
+                  <div *ngIf="activeTab === 'issues'">
+                    <app-verger-issues [vergerId]="selectedVerger.id!" [vergerNom]="selectedVerger.nom" [user]="user"></app-verger-issues>
+                  </div>
                 </div>
               </ng-container>
 

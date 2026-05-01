@@ -1,0 +1,210 @@
+<div class="space-y-4">
+  <!-- Filters -->
+  <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-earth-border bg-earth-bg p-4 shadow-sm">
+    <div class="flex flex-1 flex-wrap gap-3">
+      <select [(ngModel)]="filters.type" (change)="applyFilters()" class="rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+        <option value="">Tous les types</option>
+        <option value="MALADIE">Maladie</option>
+        <option value="IRRIGATION">Irrigation</option>
+        <option value="RAVAGEUR">Ravageur</option>
+        <option value="METEO">Météo</option>
+        <option value="AUTRE">Autre</option>
+      </select>
+
+      <select [(ngModel)]="filters.gravite" (change)="applyFilters()" class="rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+        <option value="">Toutes gravités</option>
+        <option value="FAIBLE">Faible</option>
+        <option value="MOYENNE">Moyenne</option>
+        <option value="CRITIQUE">Critique</option>
+      </select>
+
+      <select [(ngModel)]="filters.statut" (change)="applyFilters()" class="rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+        <option value="">Tous les statuts</option>
+        <option value="SIGNALE">Signalé</option>
+        <option value="EN_COURS">En cours</option>
+        <option value="RESOLU">Résolu</option>
+      </select>
+
+      <button (click)="resetFilters()" class="text-xs font-medium text-olive-600 hover:underline">Réinitialiser</button>
+    </div>
+
+    <button (click)="openCreate()" class="inline-flex items-center gap-2 rounded-xl bg-olive-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-olive-700">
+      <span class="material-symbols-outlined text-base">report_problem</span>
+      Signaler un problème
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-hidden rounded-2xl border border-earth-border bg-white shadow-sm">
+    <div *ngIf="loading" class="py-10 text-center">
+      <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+      <p class="mt-2 text-sm text-earth-muted">Chargement des problèmes...</p>
+    </div>
+
+    <div *ngIf="!loading && issues.length === 0" class="py-10 text-center">
+      <span class="material-symbols-outlined text-4xl text-earth-muted">task_alt</span>
+      <p class="mt-2 text-sm font-medium text-earth-text">Aucun problème signalé</p>
+      <p class="text-xs text-earth-muted">Tout semble en ordre pour ce verger.</p>
+    </div>
+
+    <table *ngIf="!loading && issues.length > 0" class="w-full text-left text-sm">
+      <thead class="bg-earth-bg text-xs font-semibold uppercase tracking-wider text-earth-muted">
+        <tr>
+          <th *ngIf="!vergerId" class="px-4 py-3">Verger</th>
+          <th class="px-4 py-3">Date</th>
+          <th class="px-4 py-3">Type</th>
+          <th class="px-4 py-3">Gravité</th>
+          <th class="px-4 py-3">Description</th>
+          <th class="px-4 py-3">Statut</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-earth-border">
+        <tr *ngFor="let issue of issues" class="transition-colors hover:bg-earth-bg/50">
+          <td *ngIf="!vergerId" class="px-4 py-3 font-medium text-olive-700">
+            {{ getVergerName(issue.vergerId) }}
+          </td>
+          <td class="whitespace-nowrap px-4 py-3 text-earth-muted">
+            {{ issue.dateSignalement | date:'dd/MM/yyyy HH:mm' }}
+          </td>
+          <td class="px-4 py-3 font-medium text-earth-text">
+            {{ issue.type }}
+          </td>
+          <td class="px-4 py-3">
+            <span [ngClass]="getGraviteClass(issue.gravite)" class="rounded-full border px-2 py-0.5 text-[11px] font-bold">
+              {{ issue.gravite }}
+            </span>
+          </td>
+          <td class="max-w-xs px-4 py-3 text-earth-muted">
+            <p class="truncate" [title]="issue.description">{{ issue.description }}</p>
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <span [ngClass]="getStatutClass(issue.statut)" class="rounded-full border px-2 py-0.5 text-[11px] font-medium">
+                {{ issue.statut }}
+              </span>
+              <!-- Quick status change for managers -->
+              <div *ngIf="canManage" class="relative group">
+                <button class="material-symbols-outlined text-lg text-earth-muted hover:text-olive-600">swap_vert</button>
+                <div class="absolute left-0 top-full z-10 hidden w-32 rounded-lg border border-earth-border bg-white p-1 shadow-lg group-hover:block">
+                  <button (click)="changeStatut(issue, 'SIGNALE')" class="w-full px-2 py-1 text-left text-xs hover:bg-earth-bg">Signalé</button>
+                  <button (click)="changeStatut(issue, 'EN_COURS')" class="w-full px-2 py-1 text-left text-xs hover:bg-earth-bg">En cours</button>
+                  <button (click)="changeStatut(issue, 'RESOLU')" class="w-full px-2 py-1 text-left text-xs hover:bg-earth-bg">Résolu</button>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <div class="flex justify-end gap-2">
+              <button (click)="openEdit(issue)" class="material-symbols-outlined text-lg text-earth-muted hover:text-olive-600" title="Détails / Modifier">edit_note</button>
+              <button (click)="confirmDelete(issue)" class="material-symbols-outlined text-lg text-earth-muted hover:text-red-600" title="Supprimer">delete</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Creation/Edition -->
+<div *ngIf="showModal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+  <div class="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-xl font-bold text-earth-text">{{ isEditing ? 'Modifier le signalement' : 'Signaler un nouveau problème' }}</h2>
+      <button (click)="closeModal()" class="material-symbols-outlined text-earth-muted hover:text-earth-text">close</button>
+    </div>
+
+    <form [formGroup]="issueForm" (ngSubmit)="saveIssue()" class="space-y-4">
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-earth-muted uppercase tracking-wider">Verger concerné *</label>
+        
+        <!-- Mode Verger Sélectionné (Verrouillé) -->
+        <div *ngIf="vergerId && vergerNom" class="w-full rounded-xl border border-earth-border bg-gray-50 px-3 py-2.5 text-sm font-semibold text-earth-text">
+          {{ vergerNom }}
+        </div>
+
+        <!-- Mode Global (Sélection libre) -->
+        <select *ngIf="!vergerId" formControlName="vergerId" class="w-full rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+          <option value="">Sélectionnez un verger...</option>
+          <option *ngFor="let v of vergers" [value]="v.id">{{ v.nom }} ({{ v.localisation }})</option>
+        </select>
+        <p *ngIf="!vergerId && issueForm.get('vergerId')?.touched && issueForm.get('vergerId')?.errors?.['required']" class="text-[10px] text-red-500">Le verger est obligatoire.</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-earth-muted uppercase tracking-wider">Type de problème *</label>
+          <select formControlName="type" class="w-full rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+            <option value="">Sélectionnez...</option>
+            <option value="MALADIE">Maladie</option>
+            <option value="IRRIGATION">Irrigation</option>
+            <option value="RAVAGEUR">Ravageur</option>
+            <option value="METEO">Météo</option>
+            <option value="AUTRE">Autre</option>
+          </select>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-earth-muted uppercase tracking-wider">Gravité *</label>
+          <select formControlName="gravite" class="w-full rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+            <option value="">Sélectionnez...</option>
+            <option value="FAIBLE">Faible</option>
+            <option value="MOYENNE">Moyenne</option>
+            <option value="CRITIQUE">Critique</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-earth-muted uppercase tracking-wider">Description *</label>
+        <textarea formControlName="description" rows="4" placeholder="Décrivez le problème en détail..." class="w-full rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500"></textarea>
+        <p *ngIf="issueForm.get('description')?.touched && issueForm.get('description')?.errors?.['required']" class="text-[10px] text-red-500">La description est obligatoire.</p>
+        <p *ngIf="issueForm.get('description')?.touched && issueForm.get('description')?.errors?.['minlength']" class="text-[10px] text-red-500">Minimum 10 caractères.</p>
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-xs font-semibold text-earth-muted uppercase tracking-wider">Notes internes (Optionnel)</label>
+        <textarea formControlName="notes" rows="2" placeholder="Notes supplémentaires..." class="w-full rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500"></textarea>
+      </div>
+
+      <div *ngIf="isEditing && canManage" class="space-y-1">
+        <label class="text-xs font-semibold text-earth-muted uppercase tracking-wider">Statut</label>
+        <select formControlName="statut" class="w-full rounded-xl border border-earth-border bg-white px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-olive-500">
+          <option value="SIGNALE">Signalé</option>
+          <option value="EN_COURS">En cours</option>
+          <option value="RESOLU">Résolu</option>
+        </select>
+      </div>
+
+      <div class="mt-6 flex gap-3">
+        <button type="submit" [disabled]="issueForm.invalid" class="flex-1 rounded-xl bg-olive-600 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-olive-700 disabled:opacity-50">
+          {{ isEditing ? 'Mettre à jour' : 'Signaler' }}
+        </button>
+        <button type="button" (click)="closeModal()" class="flex-1 rounded-xl border border-earth-border py-2.5 text-sm font-semibold text-earth-text hover:bg-earth-bg">
+          Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation -->
+<div *ngIf="showDeleteModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/40">
+  <div class="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+    <span class="material-symbols-outlined text-5xl text-red-400">warning</span>
+    <h2 class="mt-3 text-xl font-semibold text-earth-text">Supprimer ce signalement ?</h2>
+    <p class="mt-2 text-sm text-earth-muted">Cette action est irréversible.</p>
+    <div class="mt-6 flex gap-3">
+      <button (click)="deleteIssue()" class="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white hover:bg-red-600">Supprimer</button>
+      <button (click)="showDeleteModal = false" class="flex-1 rounded-xl border border-earth-border py-2.5 text-sm font-semibold text-earth-text hover:bg-earth-bg">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div *ngIf="toast.show" class="fixed bottom-6 right-6 z-[100] flex items-center gap-2 rounded-xl border px-4 py-3 shadow-xl transition-all duration-300"
+     [style.background-color]="toast.type === 'success' ? '#f0fdf4' : '#fef2f2'"
+     [style.border-color]="toast.type === 'success' ? '#86efac' : '#fca5a5'"
+     [style.color]="toast.type === 'success' ? '#166534' : '#991b1b'">
+  <span class="material-symbols-outlined text-base">{{ toast.type === 'success' ? 'check_circle' : 'error' }}</span>
+  <span class="text-sm font-medium">{{ toast.message }}</span>
+</div>

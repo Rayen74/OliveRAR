@@ -12,11 +12,12 @@ import {
   Verger,
   VergerApiService
 } from '../../services/verger-api.service';
+import { VergerIssuesComponent } from './verger-issues/verger-issues';
 
 @Component({
   selector: 'app-vergers',
   standalone: true,
-  imports: [CommonModule, FormsModule, SidebarComponent, VergerMapComponent],
+  imports: [CommonModule, FormsModule, SidebarComponent, VergerMapComponent, VergerIssuesComponent],
   templateUrl: './vergers.html',
   styleUrl: './vergers.css'
 })
@@ -27,6 +28,7 @@ export class VergersComponent implements OnInit, OnDestroy {
   user: User | null = null;
   detailError = '';
   detailLoading = false;
+  activeTab: 'details' | 'issues' = 'details';
 
   currentPage = 1;
   readonly pageSize = 5;
@@ -277,6 +279,7 @@ export class VergersComponent implements OnInit, OnDestroy {
   selectVerger(verger: Verger): void {
     this.detailError = '';
     this.selectedVerger = this.resolveVergerDetails(verger);
+    this.activeTab = 'details';
   }
 
   trackByVerger(index: number, verger: Verger): string {
