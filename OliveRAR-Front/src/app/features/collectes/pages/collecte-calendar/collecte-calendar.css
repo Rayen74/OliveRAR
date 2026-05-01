@@ -1,0 +1,60 @@
+/* FullCalendar overrides to match earth/olive design system */
+:host ::ng-deep .fc {
+  font-family: inherit;
+}
+
+:host ::ng-deep .fc-toolbar-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #3d3225;
+}
+
+:host ::ng-deep .fc-button-primary {
+  background-color: #8a9e3a !important;
+  border-color: #5f6e27 !important;
+  font-size: 0.8rem;
+}
+
+:host ::ng-deep .fc-button-primary:not(:disabled):active,
+:host ::ng-deep .fc-button-primary.fc-button-active {
+  background-color: #5f6e27 !important;
+  border-color: #3a4418 !important;
+}
+
+:host ::ng-deep .fc-button-primary:hover {
+  background-color: #5f6e27 !important;
+}
+
+:host ::ng-deep .fc-day-today {
+  background-color: #f4f6e8 !important;
+}
+
+:host ::ng-deep .fc-col-header-cell-cushion {
+  color: #8c7d62;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+:host ::ng-deep .fc-daygrid-day-number {
+  color: #3d3225;
+  font-size: 0.8rem;
+}
+
+:host ::ng-deep .fc-event {
+  border-radius: 6px !important;
+  font-size: 0.75rem;
+  padding: 1px 5px;
+  cursor: pointer;
+}
+
+:host ::ng-deep .fc-event:hover {
+  filter: brightness(0.92);
+}
+
+/* Status badges for detail panel */
+.badge-planifiee { background: #f0f6e8; color: #5f6e27; border: 1px solid #dde4b0; }
+.badge-encours   { background: #fef9ec; color: #c47c18; border: 1px solid #fde9a2; }
+.badge-terminee  { background: #e8f5e8; color: #2d6a2d; border: 1px solid #b0d4b0; }
+.badge-annulee   { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }

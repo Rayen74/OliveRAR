@@ -1,0 +1,288 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+
+  <!-- ── Toast ─────────────────────────────────────────── -->
+  <div *ngIf="toast.show"
+       class="fixed top-6 right-6 z-[9999] flex items-center gap-2 rounded-xl border px-4 py-3 shadow-xl"
+       [class.bg-green-50]="toast.type === 'success'"
+       [class.border-green-200]="toast.type === 'success'"
+       [class.text-green-800]="toast.type === 'success'"
+       [class.bg-red-50]="toast.type === 'error'"
+       [class.border-red-200]="toast.type === 'error'"
+       [class.text-red-700]="toast.type === 'error'">
+    <span class="material-symbols-outlined text-base">
+      {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+    </span>
+    <span class="text-sm font-medium">{{ toast.message }}</span>
+  </div>
+
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8">
+
+    <!-- ── Header ────────────────────────────────────────── -->
+    <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Mes Collectes</h1>
+        <p class="text-sm text-earth-muted">
+          Collectes qui vous sont assignées — gérez les équipes d'ouvriers.
+        </p>
+      </div>
+      <div class="flex gap-2">
+        <a routerLink="/logistique/calendrier"
+           class="inline-flex items-center gap-2 rounded-xl border border-earth-border bg-white px-4 py-2.5 text-sm text-earth-text shadow-sm hover:bg-earth-bg">
+          <span class="material-symbols-outlined text-base">calendar_month</span>
+          Calendrier
+        </a>
+        <a routerLink="/logistique/tournees"
+           class="inline-flex items-center gap-2 rounded-xl bg-olive-600 px-4 py-2.5 text-sm text-white shadow-sm hover:bg-olive-700">
+          <span class="material-symbols-outlined text-base">route</span>
+          Tournées
+        </a>
+      </div>
+    </header>
+
+    <!-- ── Filtre ─────────────────────────────────────────── -->
+    <div class="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-earth-border bg-white p-4 shadow-sm">
+      <div class="flex items-center gap-2 text-sm font-medium text-earth-text">
+        <span class="material-symbols-outlined text-earth-muted">filter_list</span>
+        Filtrer par statut :
+      </div>
+      <select [(ngModel)]="filterStatut"
+              (change)="onFilterChange()"
+              class="rounded-lg border border-earth-border bg-earth-bg px-3 py-2 text-sm text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500">
+        <option value="">Tous les statuts</option>
+        <option *ngFor="let s of statuts" [value]="s">{{ formatStatut(s) }}</option>
+      </select>
+
+      <!-- Compteur -->
+      <span class="ml-auto text-sm text-earth-muted">
+        {{ totalItems }} collecte(s) assignée(s)
+      </span>
+    </div>
+
+    <!-- ── Erreur ─────────────────────────────────────────── -->
+    <div *ngIf="error"
+         class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">error</span>
+        {{ error }}
+      </div>
+    </div>
+
+    <!-- ── Loading ───────────────────────────────────────── -->
+    <div *ngIf="isLoading"
+         class="flex h-48 items-center justify-center text-earth-muted">
+      <div class="flex items-center gap-3">
+        <div class="h-5 w-5 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+        <span class="text-sm">Chargement des collectes...</span>
+      </div>
+    </div>
+
+    <!-- ── Grille collectes ───────────────────────────────── -->
+    <div *ngIf="!isLoading && !error"
+         class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+
+      <!-- Carte collecte -->
+      <div *ngFor="let c of collectes"
+           class="flex flex-col rounded-2xl border border-earth-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+
+        <!-- Top -->
+        <div class="mb-4 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="truncate text-base font-semibold text-earth-text">
+              {{ c.vergerNom || '—' }}
+            </p>
+            <p class="mt-0.5 flex items-center gap-1 text-xs text-earth-muted">
+              <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+              {{ c.datePrevue }}
+            </p>
+          </div>
+          <span class="flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                [ngClass]="statutClass(c.statut)">
+            {{ formatStatut(c.statut) }}
+          </span>
+        </div>
+
+        <!-- Infos -->
+        <div class="mb-4 space-y-2 text-sm">
+          <div class="flex items-center gap-2 text-earth-muted">
+            <span class="material-symbols-outlined text-[16px]">person</span>
+            <span class="text-earth-text font-medium">Chef :</span>
+            <span>{{ c.chefRecolteNom || '—' }}</span>
+          </div>
+
+          <div class="flex items-center gap-2 text-earth-muted">
+            <span class="material-symbols-outlined text-[16px]">group</span>
+            <span class="text-earth-text font-medium">Équipe :</span>
+            <span *ngIf="c.equipe && c.equipe.length > 0" class="text-earth-text">
+              {{ c.equipe.length }} ouvrier(s)
+            </span>
+            <span *ngIf="!c.equipe || c.equipe.length === 0"
+                  class="flex items-center gap-1 italic text-amber-600">
+              <span class="material-symbols-outlined text-[14px]">warning</span>
+              Non assignée
+            </span>
+          </div>
+        </div>
+
+        <!-- Membres équipe (chips) -->
+        <div *ngIf="c.equipe && c.equipe.length > 0"
+             class="mb-4 flex flex-wrap gap-1.5">
+          <span *ngFor="let m of c.equipe"
+                class="rounded-full bg-olive-50 px-2.5 py-0.5 text-xs font-medium text-olive-700 border border-olive-200">
+            {{ m.nom }}
+          </span>
+        </div>
+
+        <!-- Spacer -->
+        <div class="flex-1"></div>
+
+        <!-- Action -->
+        <div class="border-t border-earth-border pt-4">
+          <button (click)="openEquipePanel(c)"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-olive-300 bg-olive-50 px-3 py-2.5 text-sm font-medium text-olive-700 transition hover:bg-olive-100">
+            <span class="material-symbols-outlined text-base">group_add</span>
+            Gérer l'équipe
+          </button>
+        </div>
+
+      </div>
+
+      <!-- État vide -->
+      <div *ngIf="collectes.length === 0"
+           class="col-span-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-earth-border py-16 text-center text-earth-muted">
+        <span class="material-symbols-outlined mb-3 text-5xl text-earth-border">assignment_ind</span>
+        <p class="text-base font-medium">Aucune collecte ne vous est assignée.</p>
+        <p class="mt-1 text-sm">
+          Contactez le responsable coopérative pour être affecté à des collectes.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- ── Pagination ─────────────────────────────────────── -->
+    <div *ngIf="!isLoading && totalPages > 1"
+         class="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <p class="text-sm text-earth-muted">
+        Page <span class="font-medium text-earth-text">{{ currentPage + 1 }}</span>
+        sur {{ totalPages }}
+        — {{ totalItems }} collecte(s)
+      </p>
+      <div class="flex items-center gap-2">
+        <button (click)="previousPage()"
+                [disabled]="currentPage === 0"
+                class="inline-flex items-center gap-1 rounded-xl border border-earth-border bg-white px-4 py-2 text-sm hover:bg-earth-bg disabled:opacity-40">
+          <span class="material-symbols-outlined text-base">chevron_left</span>
+          Précédent
+        </button>
+        <button (click)="nextPage()"
+                [disabled]="currentPage >= totalPages - 1"
+                class="inline-flex items-center gap-1 rounded-xl border border-earth-border bg-white px-4 py-2 text-sm hover:bg-earth-bg disabled:opacity-40">
+          Suivant
+          <span class="material-symbols-outlined text-base">chevron_right</span>
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     PANEL ÉQUIPE — slide-over
+══════════════════════════════════════════════════════════ -->
+<div *ngIf="showEquipePanel" class="fixed inset-0 z-[9990] flex">
+
+  <!-- Overlay -->
+  <div class="flex-1 bg-black/40 backdrop-blur-sm"
+       (click)="closeEquipePanel()">
+  </div>
+
+  <!-- Panel -->
+  <div class="flex w-full max-w-md flex-col bg-white shadow-2xl">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-earth-border px-6 py-4">
+      <div>
+        <h2 class="font-bold text-earth-text">Affecter l'équipe</h2>
+        <p class="text-xs text-earth-muted">{{ equipeLabel }}</p>
+      </div>
+      <button (click)="closeEquipePanel()"
+              class="rounded-lg p-1.5 text-earth-muted hover:bg-earth-bg">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Compteur sélection -->
+    <div class="border-b border-earth-border bg-olive-50 px-6 py-2.5">
+      <p class="text-xs font-medium text-olive-700">
+        {{ selectedOuvrierIds.size }} ouvrier(s) sélectionné(s)
+      </p>
+    </div>
+
+    <!-- Liste ouvriers -->
+    <div class="flex-1 overflow-y-auto px-6 py-4">
+
+      <div *ngIf="ouvriers.length === 0"
+           class="flex flex-col items-center py-12 text-center text-earth-muted">
+        <span class="material-symbols-outlined mb-2 text-4xl text-earth-border">person_off</span>
+        <p class="text-sm">Aucun ouvrier disponible.</p>
+      </div>
+
+      <ul class="space-y-2">
+        <li *ngFor="let o of ouvriers"
+            (click)="toggleOuvrier(o.id)"
+            class="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-all"
+            [class.border-olive-400]="isSelected(o.id)"
+            [class.bg-olive-50]="isSelected(o.id)"
+            [class.border-earth-border]="!isSelected(o.id)"
+            [class.hover:border-olive-300]="!isSelected(o.id)">
+
+          <!-- Avatar initiales -->
+          <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
+               [class.bg-olive-600]="isSelected(o.id)"
+               [class.text-white]="isSelected(o.id)"
+               [class.bg-earth-bg]="!isSelected(o.id)"
+               [class.text-earth-muted]="!isSelected(o.id)">
+            {{ userInitials(o) }}
+          </div>
+
+          <!-- Nom -->
+          <span class="flex-1 text-sm font-medium text-earth-text">
+            {{ userLabel(o) }}
+          </span>
+
+          <!-- Check -->
+          <span *ngIf="isSelected(o.id)"
+                class="material-symbols-outlined text-base text-olive-600">
+            check_circle
+          </span>
+          <span *ngIf="!isSelected(o.id)"
+                class="material-symbols-outlined text-base text-earth-border">
+            radio_button_unchecked
+          </span>
+
+        </li>
+      </ul>
+    </div>
+
+    <!-- Footer -->
+    <div class="border-t border-earth-border px-6 py-4">
+      <div class="flex gap-3">
+        <button (click)="saveEquipe()"
+                [disabled]="isSubmittingEquipe"
+                class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-olive-600 py-3 text-sm font-medium text-white hover:bg-olive-700 disabled:opacity-50">
+          <div *ngIf="isSubmittingEquipe"
+               class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent">
+          </div>
+          <span class="material-symbols-outlined text-base" *ngIf="!isSubmittingEquipe">save</span>
+          {{ isSubmittingEquipe ? 'Enregistrement...' : 'Enregistrer' }}
+        </button>
+        <button (click)="closeEquipePanel()"
+                class="rounded-xl border border-earth-border px-5 py-3 text-sm text-earth-text hover:bg-earth-bg">
+          Annuler
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

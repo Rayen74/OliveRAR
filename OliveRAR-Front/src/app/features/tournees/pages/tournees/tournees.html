@@ -1,0 +1,460 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+
+  <!-- ── Toast ──────────────────────────────────────────── -->
+  <div *ngIf="toast.show"
+       class="fixed top-6 right-6 z-[9999] flex items-center gap-2 rounded-xl border px-4 py-3 shadow-xl"
+       [class.bg-green-50]="toast.type === 'success'"
+       [class.border-green-200]="toast.type === 'success'"
+       [class.text-green-800]="toast.type === 'success'"
+       [class.bg-red-50]="toast.type === 'error'"
+       [class.border-red-200]="toast.type === 'error'"
+       [class.text-red-700]="toast.type === 'error'">
+    <span class="material-symbols-outlined text-base">
+      {{ toast.type === 'success' ? 'check_circle' : 'error' }}
+    </span>
+    <span class="text-sm font-medium">{{ toast.message }}</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       MODAL — Créer / Modifier (partagé)
+  ══════════════════════════════════════════════════════ -->
+  <div *ngIf="showCreateModal || showEditModal"
+       class="fixed inset-0 z-[9990] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl"
+         style="max-height: 90vh;">
+
+      <!-- Header modal -->
+      <div class="flex flex-shrink-0 items-center justify-between border-b border-earth-border px-6 py-4">
+        <div>
+          <h2 class="font-bold text-earth-text">
+            {{ isEditMode ? 'Modifier la tournée' : 'Nouvelle tournée' }}
+          </h2>
+          <p class="text-xs text-earth-muted">
+            {{ isEditMode ? 'Modifiez les informations de la tournée.' : 'Renseignez les informations de la tournée.' }}
+          </p>
+        </div>
+        <button (click)="closeModals()"
+                class="rounded-lg p-1.5 text-earth-muted hover:bg-earth-bg">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Corps modal — scrollable -->
+      <div class="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+
+        <!-- Date -->
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">
+            Date prévue *
+          </label>
+          <input type="date"
+                 [(ngModel)]="form.datePrevue"
+                 (change)="onDateChange()"
+                 class="w-full rounded-xl border border-earth-border bg-earth-bg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-olive-400" />
+        </div>
+
+        <!-- Collectes -->
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">
+            Collectes *
+            <span class="ml-1 text-xs font-normal text-earth-muted">(minimum 2)</span>
+          </label>
+
+          <div *ngIf="isLoadingCollectes"
+               class="flex items-center gap-2 py-3 text-sm text-earth-muted">
+            <div class="h-4 w-4 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+            Chargement...
+          </div>
+
+          <div *ngIf="!isLoadingCollectes && !form.datePrevue"
+               class="rounded-xl border border-earth-border bg-earth-bg px-4 py-3 text-sm text-earth-muted">
+            Sélectionnez une date pour voir les collectes disponibles.
+          </div>
+
+          <div *ngIf="!isLoadingCollectes && form.datePrevue && collectesDuJour.length === 0"
+               class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-base">warning</span>
+              Aucune collecte planifiée pour ce jour.
+            </div>
+          </div>
+
+          <div *ngIf="!isLoadingCollectes && collectesDuJour.length > 0"
+               class="space-y-2">
+            <div *ngFor="let c of collectesDuJour"
+                 (click)="toggleCollecte(c.id)"
+                 class="flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition"
+                 [class.border-olive-400]="isCollecteSelected(c.id)"
+                 [class.bg-olive-50]="isCollecteSelected(c.id)"
+                 [class.border-earth-border]="!isCollecteSelected(c.id)">
+              <div class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border-2 transition"
+                   [class.bg-olive-600]="isCollecteSelected(c.id)"
+                   [class.border-olive-600]="isCollecteSelected(c.id)"
+                   [class.border-earth-border]="!isCollecteSelected(c.id)">
+                <span *ngIf="isCollecteSelected(c.id)"
+                      class="material-symbols-outlined text-sm text-white">check</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-start">
+                  <p class="font-bold text-earth-text truncate">🌿 {{ c.vergerNom }}</p>
+                  <span class="text-[10px] text-earth-muted uppercase tracking-wider">{{ formatStatut(c.statut) }}</span>
+                </div>
+
+                <div class="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[11px] text-earth-muted">
+                  <div class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">location_on</span>
+                    <span class="truncate">{{ c.vergerLocalisation || 'N/A' }}</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">scale</span>
+                    <span>{{ c.vergerRendementEstime || 0 }} kg</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">person</span>
+                    <span class="truncate">{{ c.chefRecolteNom || 'Non assigné' }}</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">straighten</span>
+                    <span>{{ c.vergerSuperficie || 0 }} ha</span>
+                  </div>
+                </div>
+              </div>
+              <span class="flex-shrink-0 text-xs"
+                    [class.text-olive-600]="c.statut === 'PLANIFIEE'"
+                    [class.text-amber-600]="c.statut !== 'PLANIFIEE'">
+                {{ formatStatut(c.statut) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Mode édition — collectes déjà sélectionnées sans détails -->
+          <div *ngIf="isEditMode && form.collecteIds.length > 0 && collectesDuJour.length === 0 && form.datePrevue"
+               class="mt-2 rounded-xl border border-earth-border bg-earth-bg px-4 py-3 text-sm text-earth-muted">
+            {{ form.collecteIds.length }} collecte(s) actuellement sélectionnée(s).
+          </div>
+        </div>
+
+        <!-- Ressources par groupe -->
+        <div>
+          <label class="mb-3 block text-sm font-medium text-earth-text">
+            Ressources & Matériels
+          </label>
+
+          <div class="space-y-4">
+            <div *ngFor="let groupe of groupesRessources">
+              <!-- Header groupe -->
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-sm font-semibold text-earth-text">{{ groupe.label }}</span>
+                <span class="text-xs text-earth-muted">
+          ({{ ressourcesParGroupe(groupe.categories).length }} élément(s))
+        </span>
+              </div>
+
+              <!-- Éléments du groupe -->
+              <div *ngIf="ressourcesParGroupe(groupe.categories).length === 0"
+                   class="text-xs text-earth-muted pl-2">
+                Aucun élément dans cette catégorie.
+              </div>
+
+              <div class="flex flex-wrap gap-2 pl-2">
+                <button *ngFor="let r of ressourcesParGroupe(groupe.categories)"
+                        type="button"
+                        (click)="canSelect(r) && toggleResource(r.id)"
+                        class="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition"
+                        [class.bg-olive-600]="isResourceSelected(r.id)"
+                        [class.text-white]="isResourceSelected(r.id)"
+                        [class.border-olive-600]="isResourceSelected(r.id)"
+                        [class.bg-gray-100]="isReserve(r) && !isResourceSelected(r.id)"
+                        [class.text-gray-400]="isReserve(r) && !isResourceSelected(r.id)"
+                        [class.border-gray-200]="isReserve(r) && !isResourceSelected(r.id)"
+                        [class.cursor-not-allowed]="isReserve(r) && !isResourceSelected(r.id)"
+                        [class.border-earth-border]="!isReserve(r) && !isResourceSelected(r.id)"
+                        [class.text-earth-text]="!isReserve(r) && !isResourceSelected(r.id)"
+                        [class.hover:border-olive-400]="canSelect(r)"
+                        [title]="isReserve(r) && !isResourceSelected(r.id) ? 'Déjà réservé dans une autre tournée' : ''">
+
+                  <!-- Icône statut -->
+                  <span class="material-symbols-outlined text-[14px]">
+            {{ isResourceSelected(r.id) ? 'check_circle' : (isReserve(r) ? 'lock' : 'radio_button_unchecked') }}
+          </span>
+
+                  <span>{{ r.name }}</span>
+
+                  <!-- Badge RESERVE -->
+                  <span *ngIf="isReserve(r) && !isResourceSelected(r.id)"
+                        class="rounded-full bg-gray-200 px-1.5 py-0.5 text-[9px] font-semibold text-gray-500">
+            RÉSERVÉ
+          </span>
+                </button>
+              </div>
+
+              <div class="mt-3 border-b border-earth-border"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statut (édition uniquement) -->
+        <div *ngIf="isEditMode">
+          <label class="mb-1.5 block text-sm font-medium text-earth-text">Statut</label>
+          <select [(ngModel)]="form.status"
+                  class="w-full rounded-xl border border-earth-border bg-earth-bg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-olive-400">
+            <option *ngFor="let s of statuts" [value]="s">{{ formatStatut(s) }}</option>
+          </select>
+        </div>
+
+        <!-- Résumé sélection -->
+        <div *ngIf="form.collecteIds.length > 0 || form.resourcesIds.length > 0"
+             class="rounded-xl border border-earth-border bg-earth-bg px-4 py-3">
+          <p class="mb-1.5 text-xs font-semibold text-earth-muted uppercase tracking-wide">Résumé</p>
+          <div class="flex flex-wrap gap-3 text-sm text-earth-muted">
+            <span class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">eco</span>
+              {{ form.collecteIds.length }} collecte(s)
+            </span>
+            <span *ngIf="form.resourcesIds.length > 0" class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px]">inventory_2</span>
+              {{ form.resourcesIds.length }} ressource(s)
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer modal -->
+      <div class="flex flex-shrink-0 gap-3 border-t border-earth-border px-6 py-4">
+        <button (click)="submitForm()"
+                [disabled]="isSubmitting"
+                class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-olive-600 py-2.5 text-sm font-medium text-white hover:bg-olive-700 disabled:opacity-50">
+          <div *ngIf="isSubmitting"
+               class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+          <span *ngIf="!isSubmitting" class="material-symbols-outlined text-base">
+            {{ isEditMode ? 'save' : 'add' }}
+          </span>
+          {{ isSubmitting ? 'Enregistrement...' : (isEditMode ? 'Enregistrer' : 'Créer la tournée') }}
+        </button>
+        <button (click)="closeModals()"
+                class="rounded-xl border border-earth-border px-5 py-2.5 text-sm text-earth-text hover:bg-earth-bg">
+          Annuler
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       MODAL — Suppression
+  ══════════════════════════════════════════════════════ -->
+  <div *ngIf="showDeleteConfirm"
+       class="fixed inset-0 z-[9990] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+      <div class="mb-4 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+          <span class="material-symbols-outlined text-red-600">delete</span>
+        </div>
+        <div>
+          <h3 class="font-semibold text-earth-text">Supprimer la tournée</h3>
+          <p class="text-xs text-earth-muted">Cette action est irréversible.</p>
+        </div>
+      </div>
+      <p class="mb-5 text-sm text-earth-muted">
+        Tournée du
+        <span class="font-medium text-earth-text">{{ tourneeToDelete?.datePrevue }}</span>
+        ({{ tourneeToDelete?.collecteIds?.length ?? 0 }} collectes) sera définitivement supprimée.
+      </p>
+      <div class="flex gap-3">
+        <button (click)="executeDelete()"
+                [disabled]="isDeleting"
+                class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+          <div *ngIf="isDeleting"
+               class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+          <span *ngIf="!isDeleting" class="material-symbols-outlined text-base">delete</span>
+          {{ isDeleting ? 'Suppression...' : 'Supprimer' }}
+        </button>
+        <button (click)="cancelDelete()"
+                class="rounded-xl border border-earth-border px-5 py-2.5 text-sm text-earth-text hover:bg-earth-bg">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8">
+
+    <!-- ── Header ─────────────────────────────────────────── -->
+    <header class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Mes tournées</h1>
+        <p class="text-sm text-earth-muted">Planifiez et gérez vos tournées de collecte.</p>
+      </div>
+      <button (click)="openCreateModal()"
+              class="inline-flex items-center gap-2 rounded-xl bg-olive-600 px-4 py-2.5 text-sm text-white shadow-sm hover:bg-olive-700">
+        <span class="material-symbols-outlined text-base">add</span>
+        Nouvelle tournée
+      </button>
+    </header>
+
+    <!-- ── Filtre ──────────────────────────────────────────── -->
+    <div class="mb-5 flex flex-wrap items-center gap-3">
+      <label class="text-sm text-earth-muted">Filtrer :</label>
+      <select [(ngModel)]="filterStatut"
+              (change)="onFilterChange()"
+              class="rounded-xl border border-earth-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-olive-400">
+        <option value="">Tous les statuts</option>
+        <option *ngFor="let s of statuts" [value]="s">{{ formatStatut(s) }}</option>
+      </select>
+      <span class="ml-auto text-sm text-earth-muted">{{ filteredTotal }} tournée(s)</span>
+    </div>
+
+    <!-- ── Loading ────────────────────────────────────────── -->
+    <div *ngIf="isLoading"
+         class="flex h-48 items-center justify-center text-earth-muted">
+      <div class="flex items-center gap-3">
+        <div class="h-5 w-5 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+        <span class="text-sm">Chargement...</span>
+      </div>
+    </div>
+
+    <!-- ── Erreur ──────────────────────────────────────────── -->
+    <div *ngIf="error && !isLoading"
+         class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-base">error</span>
+        {{ error }}
+      </div>
+    </div>
+
+    <!-- ── Liste vide ─────────────────────────────────────── -->
+    <div *ngIf="!isLoading && !error && tournees.length === 0"
+         class="flex h-48 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-earth-border text-center text-earth-muted">
+      <span class="material-symbols-outlined mb-2 text-4xl text-earth-border">route</span>
+      <p class="text-sm font-medium">Aucune tournée pour le moment.</p>
+      <button (click)="openCreateModal()"
+              class="mt-3 text-sm text-olive-600 hover:underline">
+        Créer votre première tournée →
+      </button>
+    </div>
+
+    <!-- ── Grille tournées ────────────────────────────────── -->
+    <div *ngIf="!isLoading && !error && tournees.length > 0"
+         class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+
+      <div *ngFor="let t of paginatedTournees"
+           class="flex flex-col rounded-2xl border border-earth-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+
+        <!-- Header carte -->
+        <div class="mb-3 flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-xs text-earth-muted">Tournée du</p>
+            <h3 class="truncate text-base font-semibold text-earth-text">{{ t.datePrevue }}</h3>
+          </div>
+          <span class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                [ngClass]="statutClass(t.status ?? '')">
+            {{ formatStatut(t.status ?? '') }}
+          </span>
+        </div>
+
+        <!-- Stats -->
+        <div class="mb-3 flex flex-wrap gap-3 text-sm text-earth-muted">
+          <span class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-[15px]">eco</span>
+            {{ t.collecteIds?.length || 0 }} collectes
+          </span>
+          <span *ngIf="(t.resourcesIds ?? []).length > 0"
+                class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-[15px]">inventory_2</span>
+            {{ t.resourcesIds!.length }} ressource(s)
+          </span>
+        </div>
+
+        <!-- Collectes enrichies -->
+        <div *ngIf="(t.collectes ?? []).length > 0" class="mb-3 space-y-2">
+          <p class="text-xs font-semibold text-earth-muted uppercase tracking-wider">Détails des Collectes :</p>
+
+          <div *ngFor="let c of (t.collectes ?? [])"
+               class="rounded-xl border border-olive-100 bg-olive-50/30 p-3">
+
+            <div class="flex justify-between items-start mb-2">
+              <span class="font-bold text-olive-800 text-sm">🌿 {{ c.vergerNom }}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-white border border-olive-200 text-olive-600 font-medium">
+        {{ c.statut }}
+      </span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px] text-earth-text">
+              <div class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-earth-muted">location_on</span>
+                <span class="truncate">{{ c.vergerLocalisation || 'N/A' }}</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-earth-muted">scale</span>
+                <span>{{ c.vergerRendementEstime }} kg</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-earth-muted">person</span>
+                <span class="truncate">{{ c.chefRecolteNom || 'Non assigné' }}</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-earth-muted">straighten</span>
+                <span>{{ c.vergerSuperficie }} ha</span>
+              </div>
+            </div>
+
+            <div class="mt-2 text-[9px] font-medium text-olive-500/80 italic">
+              Statut verger : {{ c.vergerStatut }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Ressources -->
+        <div *ngIf="(t.resourcesIds ?? []).length > 0" class="mb-3">
+          <p class="mb-1 text-xs font-medium text-earth-muted">Ressources :</p>
+          <div class="flex flex-wrap gap-1">
+            <span *ngFor="let rid of (t.resourcesIds ?? [])"
+                  class="rounded-full bg-earth-bg px-2 py-0.5 text-xs text-earth-muted border border-earth-border">
+              {{ resourceName(rid) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="flex-1"></div>
+
+        <!-- Actions carte -->
+        <div class="flex gap-2 border-t border-earth-border pt-4">
+          <button (click)="openEditModal(t)"
+                  class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-earth-border bg-white py-2 text-sm text-earth-text hover:bg-earth-bg">
+            <span class="material-symbols-outlined text-base">edit</span>
+            Modifier
+          </button>
+          <button (click)="confirmDelete(t)"
+                  class="flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">
+            <span class="material-symbols-outlined text-base">delete</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Pagination ─────────────────────────────────────── -->
+    <div *ngIf="!isLoading && filteredTotal > pageSize"
+         class="mt-6 flex items-center justify-center gap-3">
+      <button (click)="previousPage()"
+              [disabled]="currentPage === 0"
+              class="inline-flex items-center gap-1 rounded-xl border border-earth-border bg-white px-4 py-2 text-sm disabled:opacity-40 hover:bg-earth-bg">
+        <span class="material-symbols-outlined text-base">chevron_left</span>
+        Précédent
+      </button>
+      <span class="text-sm text-earth-muted">
+        Page {{ currentPage + 1 }} / {{ totalPages }}
+      </span>
+      <button (click)="nextPage()"
+              [disabled]="currentPage >= totalPages - 1"
+              class="inline-flex items-center gap-1 rounded-xl border border-earth-border bg-white px-4 py-2 text-sm disabled:opacity-40 hover:bg-earth-bg">
+        Suivant
+        <span class="material-symbols-outlined text-base">chevron_right</span>
+      </button>
+    </div>
+
+  </main>
+</div>

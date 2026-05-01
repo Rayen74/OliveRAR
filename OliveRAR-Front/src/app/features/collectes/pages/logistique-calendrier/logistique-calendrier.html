@@ -1,0 +1,166 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 p-8">
+
+    <header class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-earth-text">Calendrier</h1>
+        <p class="text-sm text-earth-muted">Vos collectes et tournées planifiées — cliquez sur un jour pour les détails.</p>
+      </div>
+      <div class="flex gap-2">
+        <a routerLink="/responsable-logistique/logistique-collecte"
+           class="inline-flex items-center gap-2 rounded-xl border border-earth-border bg-white px-4 py-2.5 text-sm text-earth-text shadow-sm hover:bg-earth-bg">
+          <span class="material-symbols-outlined text-base">list</span>
+          Mes collectes
+        </a>
+        <a routerLink="/responsable-logistique/tournees"
+           class="inline-flex items-center gap-2 rounded-xl bg-olive-600 px-4 py-2.5 text-sm text-white shadow-sm hover:bg-olive-700">
+          <span class="material-symbols-outlined text-base">route</span>
+          Tournées
+        </a>
+      </div>
+    </header>
+
+    <!-- Légende -->
+    <div class="mb-5 flex flex-wrap items-center gap-5">
+      <p class="text-xs font-semibold uppercase tracking-widest text-earth-muted">Légende :</p>
+      <div class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-[#8a9e3a]"></span><span class="text-xs text-earth-muted">Collecte planifiée</span></div>
+      <div class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-[#f5b731]"></span><span class="text-xs text-earth-muted">Collecte en cours</span></div>
+      <div class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-[#5f6e27]"></span><span class="text-xs text-earth-muted">Collecte terminée</span></div>
+      <div class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-[#6366f1]"></span><span class="text-xs text-earth-muted">Tournée</span></div>
+    </div>
+
+    <div *ngIf="error" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
+
+    <div *ngIf="isLoading" class="flex h-64 items-center justify-center text-earth-muted">
+      <div class="flex items-center gap-2">
+        <div class="h-5 w-5 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+        Chargement du calendrier...
+      </div>
+    </div>
+
+    <div *ngIf="!isLoading && !error" class="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_340px]">
+
+      <!-- Calendrier -->
+      <div class="calendar-card rounded-2xl border border-earth-border bg-white p-4 shadow-sm">
+        <full-calendar [options]="calendarOptions"></full-calendar>
+      </div>
+
+      <!-- Panel détail jour -->
+      <aside class="h-fit rounded-2xl border border-earth-border bg-white p-5 shadow-sm">
+        <p class="mb-4 text-xs uppercase tracking-[0.15em] text-earth-muted">Détail du jour sélectionné</p>
+
+        <div *ngIf="selectedDay; else noSelection">
+
+          <!-- Date + bouton créer tournée -->
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="font-semibold text-earth-text">{{ selectedDay.date }}</h3>
+            <a
+              [routerLink]="['/responsable-logistique/tournees']"
+              [queryParams]="{ date: selectedDay.date }"
+              class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700"
+            >
+              <span class="material-symbols-outlined text-sm">add</span>
+              Créer tournée
+            </a>
+          </div>
+
+          <!-- Collectes du jour -->
+          <div *ngIf="selectedDay.collectes.length > 0" class="mb-4">
+            <p class="mb-2 text-xs font-semibold text-earth-muted">
+              🌿 {{ selectedDay.collectes.length }} collecte(s)
+            </p>
+            <div class="space-y-2">
+              <div *ngFor="let c of selectedDay.collectes"
+                   class="rounded-xl border border-earth-border bg-earth-bg px-3 py-2.5 text-sm">
+
+                <!-- Nom verger + badge statut -->
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-earth-text">{{ c.vergerNom }}</span>
+                  <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                        [ngClass]="statutBadgeClass(c.statut)">
+                    {{ formatStatut(c.statut) }}
+                  </span>
+                </div>
+
+                <!-- Localisation -->
+                <div class="flex items-start gap-1 mb-2 text-[11px] text-olive-700">
+                  <span class="material-symbols-outlined text-xs leading-tight">location_on</span>
+                  <span>{{ c.vergerLocalisation || 'Localisation inconnue' }}</span>
+                </div>
+
+                <!-- Chef + équipe -->
+                <p class="text-[10px] text-earth-muted border-t border-earth-border pt-1">
+                  Chef : {{ c.chefRecolteNom || '—' }} &middot; {{ c.equipeSize ?? 0 }} ouvrier(s)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carte Leaflet -->
+          <div *ngIf="selectedDay.collectes.length > 0" class="mb-4">
+            <p class="mb-2 text-xs font-semibold text-earth-muted">🗺️ Localisation des vergers</p>
+
+            <!-- Spinner pendant géocodage -->
+            <div *ngIf="isMapLoading"
+                 class="flex h-[220px] items-center justify-center rounded-xl border border-earth-border bg-earth-bg text-xs text-earth-muted">
+              <div class="flex items-center gap-2">
+                <div class="h-4 w-4 animate-spin rounded-full border-2 border-olive-600 border-t-transparent"></div>
+                Chargement de la carte...
+              </div>
+            </div>
+
+            <!-- Conteneur Leaflet — toujours dans le DOM, caché pendant le chargement -->
+            <div id="collectes-map"
+                 class="rounded-xl border border-earth-border overflow-hidden"
+                 [style.display]="isMapLoading ? 'none' : 'block'"
+                 style="height: 220px; width: 100%;">
+            </div>
+          </div>
+
+          <!-- Tournées du jour -->
+          <div *ngIf="selectedDay.tournees.length > 0" class="mb-4">
+            <p class="mb-2 text-xs font-semibold text-earth-muted">
+              🚛 {{ selectedDay.tournees.length }} tournée(s)
+            </p>
+            <div class="space-y-2">
+              <div *ngFor="let t of selectedDay.tournees"
+                   class="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium text-indigo-800">Tournée</span>
+                  <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                    {{ formatTourneeStatut(t.status) }}
+                  </span>
+                </div>
+                <p class="mt-1 text-xs text-indigo-600">
+                  {{ t.collecteIds?.length ?? 0 }} collecte(s) &middot; {{ t.materialIds?.length ?? 0 }} ressource(s)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rien ce jour -->
+          <div *ngIf="selectedDay.collectes.length === 0 && selectedDay.tournees.length === 0"
+               class="py-6 text-center text-sm text-earth-muted">
+            Aucune activité ce jour.
+            <a [routerLink]="['/responsable-logistique/tournees']"
+               [queryParams]="{ date: selectedDay.date }"
+               class="mt-2 inline-block text-indigo-600 hover:underline">
+              Créer une tournée pour ce jour
+            </a>
+          </div>
+
+        </div>
+
+        <ng-template #noSelection>
+          <div class="flex flex-col items-center py-10 text-center text-earth-muted">
+            <span class="material-symbols-outlined mb-2 text-4xl text-earth-border">touch_app</span>
+            <p class="text-sm">Cliquez sur un jour ou un événement pour voir les détails.</p>
+          </div>
+        </ng-template>
+      </aside>
+    </div>
+
+  </main>
+</div>
