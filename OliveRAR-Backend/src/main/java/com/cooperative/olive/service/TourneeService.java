@@ -49,14 +49,16 @@ public class TourneeService {
     private final ActiviteService activiteService;
 
     public Map<String, Object> getAll(int page, int size, String search, String status) {
-        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_CHEF_RECOLTE);
+        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE,
+                Role.RESPONSABLE_CHEF_RECOLTE);
 
         int safePage = Math.max(page, 0);
         int safeSize = size <= 0 ? 6 : Math.min(size, 50);
         Query query = new Query();
 
         if (search != null && !search.isBlank()) {
-            query.addCriteria(Criteria.where("name").regex(".*" + java.util.regex.Pattern.quote(search.trim()) + ".*", "i"));
+            query.addCriteria(
+                    Criteria.where("name").regex(".*" + java.util.regex.Pattern.quote(search.trim()) + ".*", "i"));
         }
         if (status != null && !status.isBlank()) {
             query.addCriteria(Criteria.where("status").is(status.trim().toUpperCase()));
@@ -64,7 +66,8 @@ public class TourneeService {
 
         long totalElements = mongoTemplate.count(query, Tournee.class);
         int totalPages = Math.max(1, (int) Math.ceil((double) totalElements / safeSize));
-        query.with(org.springframework.data.domain.PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+        query.with(org.springframework.data.domain.PageRequest.of(safePage, safeSize,
+                Sort.by(Sort.Direction.DESC, "createdAt")));
 
         List<Map<String, Object>> items = mongoTemplate.find(query, Tournee.class).stream()
                 .map(this::toSummary)
@@ -76,8 +79,7 @@ public class TourneeService {
                 "page", safePage,
                 "size", safeSize,
                 "totalElements", totalElements,
-                "totalPages", totalPages
-        );
+                "totalPages", totalPages);
     }
 
     private Map<String, Object> toSummary(Tournee t) {
@@ -89,12 +91,12 @@ public class TourneeService {
                 "plannedEndTime", t.getPlannedEndTime() != null ? t.getPlannedEndTime() : "",
                 "status", t.getStatus(),
                 "optimizationEnabled", t.getOptimizationEnabled() != null && t.getOptimizationEnabled(),
-                "affectations", resourceAllocationService.enrichAssignments(t.getAffectations())
-        );
+                "affectations", resourceAllocationService.enrichAssignments(t.getAffectations()));
     }
 
     public Map<String, Object> getById(String id) {
-        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_CHEF_RECOLTE);
+        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE,
+                Role.RESPONSABLE_CHEF_RECOLTE);
         Tournee tournee = tourneeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tournee introuvable."));
         return enrichTournee(tournee);
@@ -104,8 +106,7 @@ public class TourneeService {
         currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE);
         validateTournee(tournee, null);
         List<Affectation> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
-                tournee.getAffectations(), List.of(), "TOURNEE", null
-        );
+                tournee.getAffectations(), List.of(), "TOURNEE", null);
 
         tournee.setId(null);
         tournee.setCollecteIds(new ArrayList<>(tournee.getCollecteIds()));
@@ -137,8 +138,7 @@ public class TourneeService {
 
         validateTournee(updatedTournee, id);
         List<Affectation> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
-                updatedTournee.getAffectations(), existing.getAffectations(), "TOURNEE", id
-        );
+                updatedTournee.getAffectations(), existing.getAffectations(), "TOURNEE", id);
 
         existing.setName(updatedTournee.getName().trim());
         existing.setCollecteIds(new ArrayList<>(updatedTournee.getCollecteIds()));
@@ -211,8 +211,7 @@ public class TourneeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tournee introuvable."));
 
         List<Affectation> normalizedAssignments = resourceAllocationService.normalizeAndValidateAssignments(
-                Affectations, tournee.getAffectations(), "TOURNEE", id
-        );
+                Affectations, tournee.getAffectations(), "TOURNEE", id);
         List<Affectation> previousAssignments = tournee.getAffectations() == null
                 ? List.of()
                 : new ArrayList<>(tournee.getAffectations());
@@ -260,12 +259,6 @@ public class TourneeService {
         }
     }
 
-    private void ensureCollecteExists(String collecteId) {
-        if (!collecteRepository.existsById(collecteId)) {
-            throw new ResourceNotFoundException("Collecte introuvable: " + collecteId);
-        }
-    }
-
     private void validateCollecteCanJoinTournee(String collecteId, String currentTourneeId) {
         Collecte collecte = collecteRepository.findById(collecteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Collecte introuvable: " + collecteId));
@@ -276,7 +269,8 @@ public class TourneeService {
 
         // Hybrid Approach Rule:
         // A collecte can belong to at most ONE active tournee.
-        // This prevents ambiguity regarding which "common/shared" resources the collecte inherits.
+        // This prevents ambiguity regarding which "common/shared" resources the
+        // collecte inherits.
         boolean alreadyInActiveTournee = tourneeRepository.findAll().stream()
                 .filter(t -> currentTourneeId == null || !t.getId().equals(currentTourneeId))
                 .filter(t -> !Set.of("TERMINEE", "ANNULEE").contains(normalizeStatus(t.getStatus())))
@@ -303,14 +297,16 @@ public class TourneeService {
         item.put("status", tournee.getStatus());
         item.put("createdAt", tournee.getCreatedAt());
         item.put("updatedAt", tournee.getUpdatedAt());
-        List<Map<String, Object>> collecteDetails = buildCollecteDetails(tournee.getCollecteIds(), tournee.getAffectations());
+        List<Map<String, Object>> collecteDetails = buildCollecteDetails(tournee.getCollecteIds(),
+                tournee.getAffectations());
         item.put("collectes", collecteDetails);
         item.put("equipe", buildEquipeForTournee(collecteDetails));
         item.put("affectations", resourceAllocationService.enrichAssignments(tournee.getAffectations()));
         return item;
     }
 
-    private List<Map<String, Object>> buildCollecteDetails(List<String> collecteIds, List<Affectation> tourneeAssignments) {
+    private List<Map<String, Object>> buildCollecteDetails(List<String> collecteIds,
+            List<Affectation> tourneeAssignments) {
         return collecteIds.stream()
                 .map(collecteRepository::findById)
                 .flatMap(java.util.Optional::stream)
@@ -318,7 +314,8 @@ public class TourneeService {
                     Map<String, Object> details = new HashMap<>();
                     details.put("id", collecte.getId());
                     details.put("name", collecte.getName());
-                    details.put("datePrevue", collecte.getDatePrevue() != null ? collecte.getDatePrevue().toString() : null);
+                    details.put("datePrevue",
+                            collecte.getDatePrevue() != null ? collecte.getDatePrevue().toString() : null);
                     details.put("statut", collecte.getStatut());
                     Verger verger = vergerRepository.findById(collecte.getVergerId()).orElse(null);
                     details.put("vergerId", collecte.getVergerId());
@@ -327,24 +324,28 @@ public class TourneeService {
                     details.put("latitude", verger != null ? verger.getLatitude() : null);
                     details.put("longitude", verger != null ? verger.getLongitude() : null);
                     details.put("equipe", buildEquipeDetails(collecte));
-                    details.put("inheritedAffectations", resourceAllocationService.enrichAssignments(tourneeAssignments));
-                    details.put("affectations", resourceAllocationService.enrichAssignments(collecte.getAffectations()));
-                    List<Affectation> mergedAssignments = mergeAssignments(tourneeAssignments, collecte.getAffectations());
+                    details.put("inheritedAffectations",
+                            resourceAllocationService.enrichAssignments(tourneeAssignments));
+                    details.put("affectations",
+                            resourceAllocationService.enrichAssignments(collecte.getAffectations()));
+                    List<Affectation> mergedAssignments = mergeAssignments(tourneeAssignments,
+                            collecte.getAffectations());
                     details.put("mergedAffectations", resourceAllocationService.enrichAssignments(mergedAssignments));
                     return details;
                 })
                 .collect(Collectors.toList());
     }
 
-    private List<Affectation> mergeAssignments(List<Affectation> tourneeAssignments, List<Affectation> collecteAssignments) {
+    private List<Affectation> mergeAssignments(List<Affectation> tourneeAssignments,
+            List<Affectation> collecteAssignments) {
         Map<String, Affectation> merged = new HashMap<>();
-        
+
         // Hybrid Approach:
         // 1. Add tournee assignments as the base (inherited/common resources)
         for (Affectation ta : tourneeAssignments) {
             merged.put(ta.getCibleId(), ta);
         }
-        
+
         // 2. Override with collecte assignments (specific/exceptional resources)
         // If a collecte specifies an assignment for the same unit, it takes precedence.
         for (Affectation ca : collecteAssignments) {
@@ -387,18 +388,19 @@ public class TourneeService {
     private Map<String, String> toEquipeMember(User user) {
         return Map.of(
                 "id", user.getId(),
-                "nom", user.getPrenom() + " " + user.getNom()
-        );
+                "nom", user.getPrenom() + " " + user.getNom());
     }
+
     public List<Map<String, Object>> getCalendarData() {
-        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_CHEF_RECOLTE);
+        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE,
+                Role.RESPONSABLE_CHEF_RECOLTE);
         return tourneeRepository.findAll().stream().map(t -> {
             Map<String, Object> item = new HashMap<>();
             item.put("id", t.getId());
             item.put("name", t.getName());
             item.put("datePrevue", t.getDatePrevue() != null ? t.getDatePrevue().toString() : null);
             item.put("status", t.getStatus());
-            
+
             List<String> vergerNames = t.getCollecteIds().stream()
                     .map(collecteRepository::findById)
                     .flatMap(java.util.Optional::stream)

@@ -51,6 +51,7 @@ public class GlobalExceptionHandler {
     }
 
     private String formatFieldError(FieldError error) {
-        return error.getField() + ": " + (error.getDefaultMessage() != null ? error.getDefaultMessage() : "valeur invalide");
+        return error.getField() + ": "
+                + (error.getDefaultMessage() != null ? error.getDefaultMessage() : "valeur invalide");
     }
 }

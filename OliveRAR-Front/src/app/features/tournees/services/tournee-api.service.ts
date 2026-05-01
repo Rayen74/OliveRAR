@@ -13,7 +13,7 @@ import { Affectation } from '../../collectes/models/collecte.model';
 export class TourneeApiService {
   private readonly apiUrl = `${API_PREFIX}/tournees`;
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(private readonly http: HttpClient) { }
 
   getAll(page = 0, size = 6, search?: string, status?: string): Observable<PaginatedTourneesResponse> {
     let params = new HttpParams()

@@ -13,7 +13,7 @@ import {
 import { TourneeApiService } from '../../services/tournee-api.service';
 import { Unite } from '../../../ressources/models/logistique.model';
 import { UniteApiService } from '../../../ressources/services/unite-api.service';
-import { AuthService, Role } from '../../../../auth/auth.service';
+import { AuthService, Role } from '../../../../core/auth/auth.service';
 import { ToastService } from '../../../../shared/services/toast.service';
 
 @Component({
@@ -52,7 +52,8 @@ export class TourneesPageComponent implements OnInit {
   }
 
   get canEdit(): boolean {
-    return this.authService.getConnectedUser()?.role === Role.RESPONSABLE_LOGISTIQUE;
+    const role = this.authService.getConnectedUser()?.role;
+    return role === Role.RESPONSABLE_LOGISTIQUE || role === Role.RESPONSABLE_COOPERATIVE;
   }
 
   readonly statuses = ['PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE'];
@@ -61,6 +62,7 @@ export class TourneesPageComponent implements OnInit {
   dropdownUsers: DropdownUser[] = [];
   selectedCollecteIds = new Set<string>();
   currentAssignments: Affectation[] = [];
+  selectedOuvrierIds = new Set<string>();
   editingAssignmentIndex: number | null = null;
 
   filterForm: FormGroup;
@@ -183,6 +185,7 @@ export class TourneesPageComponent implements OnInit {
       endTime: '',
       statutReservation: 'PLANIFIEE'
     });
+    this.selectedOuvrierIds.clear();
     this.showForm = true;
   }
 
@@ -197,6 +200,18 @@ export class TourneesPageComponent implements OnInit {
       status: tournee.status,
       optimizationEnabled: !!tournee.optimizationEnabled
     });
+
+    // Isoler les ouvriers des affectations existantes pour la gestion séparée
+    this.selectedOuvrierIds.clear();
+    this.currentAssignments = [];
+    (tournee.affectations ?? []).forEach(aff => {
+      if (aff.typeCible === 'HUMAIN') {
+        this.selectedOuvrierIds.add(aff.cibleId);
+      } else {
+        this.currentAssignments.push(aff);
+      }
+    });
+
     this.showForm = true;
   }
 
@@ -204,7 +219,16 @@ export class TourneesPageComponent implements OnInit {
     this.showForm = false;
     this.editingId = null;
     this.selectedCollecteIds.clear();
+    this.selectedOuvrierIds.clear();
     this.currentAssignments = [];
+  }
+
+  toggleOuvrier(userId: string): void {
+    if (this.selectedOuvrierIds.has(userId)) {
+      this.selectedOuvrierIds.delete(userId);
+    } else {
+      this.selectedOuvrierIds.add(userId);
+    }
   }
 
   toggleCollecte(collecteId: string): void {
@@ -311,7 +335,16 @@ export class TourneesPageComponent implements OnInit {
       datePrevue: raw.plannedStartTime?.split('T')[0],
       status: raw.statutReservation,
       optimizationEnabled: !!raw.optimizationEnabled,
-      affectations: this.currentAssignments
+      affectations: [
+        ...this.currentAssignments,
+        ...Array.from(this.selectedOuvrierIds).map(userId => ({
+          cibleId: userId,
+          typeCible: 'HUMAIN' as const,
+          startTime: raw.plannedStartTime,
+          endTime: raw.plannedEndTime,
+          statutReservation: raw.statutReservation || 'PLANIFIEE'
+        }))
+      ]
     };
 
     this.isSubmitting = true;
@@ -417,10 +450,14 @@ export class TourneesPageComponent implements OnInit {
       return;
     }
     const isUser = this.dropdownUsers.some(u => u.id === raw.cibleId);
+    if (isUser) {
+      this.toastService.error('L\'affectation des ouvriers doit se faire au niveau des ressources communes de la tournée.');
+      return;
+    }
     
     this.specificAssignments.push({
       cibleId: raw.cibleId,
-      typeCible: isUser ? 'HUMAIN' : 'MACHINE',
+      typeCible: 'MACHINE',
       startTime: raw.startTime,
       endTime: raw.endTime,
       statutReservation: raw.statutReservation

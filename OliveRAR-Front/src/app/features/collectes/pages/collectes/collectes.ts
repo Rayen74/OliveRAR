@@ -16,7 +16,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Unite } from '../../../ressources/models/logistique.model';
 import { UniteApiService } from '../../../ressources/services/unite-api.service';
-import { AuthService, Role } from '../../../../auth/auth.service';
+import { AuthService, Role } from '../../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-collectes',
@@ -45,7 +45,8 @@ export class CollectesComponent implements OnInit, OnDestroy {
   }
 
   get canEdit(): boolean {
-    return this.authService.getConnectedUser()?.role === Role.RESPONSABLE_LOGISTIQUE;
+    const role = this.authService.getConnectedUser()?.role;
+    return role === Role.RESPONSABLE_LOGISTIQUE || role === Role.RESPONSABLE_COOPERATIVE;
   }
 
   filterChefId = '';
@@ -65,7 +66,6 @@ export class CollectesComponent implements OnInit, OnDestroy {
   readyVergers: DropdownVerger[] = [];
   chefsRecolte: DropdownUser[] = [];
   responsablesAffectation: DropdownUser[] = [];
-  ouvriers: DropdownUser[] = [];
   unites: Unite[] = [];
   currentAssignments: Affectation[] = [];
 
@@ -166,11 +166,6 @@ export class CollectesComponent implements OnInit, OnDestroy {
 
     this.collecteApi.getUsersByRole('RESPONSABLE_LOGISTIQUE').pipe(take(1)).subscribe({
       next: (res) => (this.responsablesAffectation = res.users ?? []),
-      error: () => {},
-    });
-
-    this.collecteApi.getUsersByRole('OUVRIER').pipe(take(1)).subscribe({
-      next: (res) => (this.ouvriers = res.users ?? []),
       error: () => {},
     });
 
@@ -393,10 +388,6 @@ export class CollectesComponent implements OnInit, OnDestroy {
     // 2. Fallback to local lookup for units
     const unite = this.unites.find((item) => item.id === cibleId);
     if (unite) return unite.codeUnique;
-    
-    // 3. Fallback to local lookup for users
-    const user = this.ouvriers.find(u => u.id === cibleId);
-    if (user) return `${user.prenom} ${user.nom}`;
     
     return cibleId;
   }

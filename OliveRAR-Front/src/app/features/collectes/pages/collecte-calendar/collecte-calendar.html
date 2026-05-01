@@ -8,10 +8,8 @@
         <h1 class="text-3xl font-bold text-earth-text">Calendrier des tournées</h1>
         <p class="text-sm text-earth-muted">Vue d'ensemble des tournées logistiques et des vergers concernés.</p>
       </div>
-      <a
-        routerLink="/responsable/tournees"
-        class="inline-flex items-center gap-2 rounded-xl border border-earth-border bg-white px-4 py-2.5 text-sm text-earth-text shadow-sm transition-colors hover:bg-earth-bg"
-      >
+      <a routerLink="/responsable/tournees"
+        class="inline-flex items-center gap-2 rounded-xl border border-earth-border bg-white px-4 py-2.5 text-sm text-earth-text shadow-sm transition-colors hover:bg-earth-bg">
         <span class="material-symbols-outlined text-base">list</span>
         Vue liste
       </a>
@@ -36,7 +34,8 @@
       </div>
     </div>
 
-    <div *ngIf="error" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
+    <div *ngIf="error" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error }}
+    </div>
 
     <div *ngIf="isLoading" class="flex h-64 items-center justify-center text-earth-muted">
       <div class="flex items-center gap-2">
@@ -62,7 +61,8 @@
             </button>
           </div>
 
-          <span class="mb-4 inline-block rounded-full px-3 py-1 text-xs font-semibold" [ngClass]="statutBadgeClass(selectedEvent.statut)">
+          <span class="mb-4 inline-block rounded-full px-3 py-1 text-xs font-semibold"
+            [ngClass]="statutBadgeClass(selectedEvent.statut)">
             {{ formatStatut(selectedEvent.statut) }}
           </span>
 
@@ -71,15 +71,17 @@
               <p class="text-xs font-medium text-earth-muted uppercase tracking-wider mb-1">Date prévue</p>
               <p class="font-semibold text-earth-text">{{ selectedEvent.datePrevue | date:'longDate' }}</p>
             </div>
-            
+
             <div>
               <p class="text-xs font-medium text-earth-muted uppercase tracking-wider mb-2">Vergers concernés</p>
               <div class="flex flex-wrap gap-1.5">
-                <span *ngFor="let v of selectedEvent.vergerNames" class="inline-flex items-center gap-1 rounded-md bg-white border border-earth-border px-2 py-1 text-[11px] text-earth-text">
+                <span *ngFor="let v of selectedEvent.vergerNames"
+                  class="inline-flex items-center gap-1 rounded-md bg-white border border-earth-border px-2 py-1 text-[11px] text-earth-text">
                   <span class="material-symbols-outlined text-[10px]">forest</span>
                   {{ v }}
                 </span>
-                <span *ngIf="!selectedEvent.vergerNames?.length" class="text-xs italic text-gray-400">Aucun verger</span>
+                <span *ngIf="!selectedEvent.vergerNames?.length" class="text-xs italic text-gray-400">Aucun
+                  verger</span>
               </div>
             </div>
 
@@ -89,10 +91,8 @@
             </div>
           </div>
 
-          <a
-            routerLink="/responsable/tournees"
-            class="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-olive-600 py-3 text-sm font-medium text-white shadow-sm transition-all hover:bg-olive-700 hover:shadow-md"
-          >
+          <a routerLink="/responsable/tournees"
+            class="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-olive-600 py-3 text-sm font-medium text-white shadow-sm transition-all hover:bg-olive-700 hover:shadow-md">
             <span class="material-symbols-outlined text-base">visibility</span>
             Consulter les détails
           </a>

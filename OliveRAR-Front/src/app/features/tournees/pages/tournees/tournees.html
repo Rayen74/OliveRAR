@@ -162,6 +162,27 @@
             </label>
           </div>
         </div>
+        
+        <!-- Section Équipe (Dédiée) -->
+        <div class="rounded-xl border border-earth-border p-4 xl:col-span-2 bg-olive-50/20">
+          <div class="mb-3 flex items-center justify-between">
+            <h3 class="font-semibold text-earth-text flex items-center gap-2">
+              <span class="material-symbols-outlined text-olive-600">groups</span>
+              Équipe de la tournée
+            </h3>
+            <span class="text-sm text-earth-muted">{{ selectedOuvrierIds.size }} ouvrier(s) sélectionné(s)</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <label *ngFor="let user of dropdownUsers" 
+              class="flex items-center gap-2 rounded-lg border border-earth-border bg-white p-2.5 transition-colors hover:bg-earth-bg cursor-pointer"
+              [class.border-olive-500]="selectedOuvrierIds.has(user.id!)"
+              [class.bg-olive-50]="selectedOuvrierIds.has(user.id!)">
+              <input type="checkbox" [checked]="selectedOuvrierIds.has(user.id!)" (change)="toggleOuvrier(user.id!)" class="accent-olive-600">
+              <span class="text-xs font-medium text-earth-text truncate">{{ userLabel(user) }}</span>
+            </label>
+          </div>
+          <p *ngIf="dropdownUsers.length === 0" class="text-center py-4 text-sm text-earth-muted italic">Aucun ouvrier disponible.</p>
+        </div>
 
         <div *ngIf="isResponsableLogistique" class="rounded-xl border border-earth-border p-4 xl:col-span-2">
           <div class="mb-3 flex items-center justify-between">
@@ -176,11 +197,6 @@
                 <optgroup label="Unités Mobiles">
                   <option *ngFor="let res of unites" [value]="res.id">
                     {{ res.codeUnique }}
-                  </option>
-                </optgroup>
-                <optgroup label="Ouvriers">
-                  <option *ngFor="let user of dropdownUsers" [value]="user.id">
-                    {{ userLabel(user) }}
                   </option>
                 </optgroup>
               </select>
@@ -350,9 +366,7 @@
                   <optgroup label="Machines">
                     <option *ngFor="let u of unites" [value]="u.id">{{ u.codeUnique }}</option>
                   </optgroup>
-                  <optgroup label="Ouvriers">
-                    <option *ngFor="let user of dropdownUsers" [value]="user.id">{{ userLabel(user) }}</option>
-                  </optgroup>
+                  <!-- Les ouvriers ne sont plus sélectionnables ici car ils sont gérés au niveau de la tournée -->
                 </select>
              </div>
              <div>

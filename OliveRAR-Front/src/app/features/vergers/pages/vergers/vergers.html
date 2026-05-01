@@ -17,7 +17,7 @@
         <h1 class="text-3xl font-bold text-earth-text">Mes vergers</h1>
         <p class="text-sm text-earth-muted">Liste compacte, détails rapides et pagination performante.</p>
       </div>
-      <button (click)="openCreate()"
+      <button *ngIf="isAgriculteur" (click)="openCreate()"
         class="inline-flex items-center justify-center gap-2 rounded-xl bg-olive-600 px-4 py-2.5 text-white shadow-sm transition-colors hover:bg-olive-700">
         <span class="material-symbols-outlined text-base">add</span>
         Nouveau verger
@@ -119,7 +119,7 @@
 
               <div class="mt-4 flex items-center justify-between gap-2 border-t border-earth-border pt-3">
                 <span class="text-xs text-earth-muted">Cliquez pour afficher les détails</span>
-                <div class="flex gap-2">
+                <div *ngIf="isAgriculteur" class="flex gap-2">
                   <button (click)="openEdit(verger); $event.stopPropagation()"
                     class="inline-flex items-center justify-center rounded-lg border border-earth-border px-2.5 py-2 text-earth-text transition-colors hover:bg-earth-bg"
                     aria-label="Modifier le verger">
@@ -217,7 +217,7 @@
                     }}</span>
                 </div>
 
-                <div class="flex gap-2">
+                <div *ngIf="isAgriculteur" class="flex gap-2">
                   <button (click)="openEdit(selectedVerger)"
                     class="flex-1 rounded-xl border border-earth-border px-3 py-2 text-sm font-medium text-earth-text transition-colors hover:bg-earth-bg">
                     Modifier

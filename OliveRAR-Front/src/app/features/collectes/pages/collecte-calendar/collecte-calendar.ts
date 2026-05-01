@@ -9,6 +9,7 @@ import frLocale from '@fullcalendar/core/locales/fr';
 
 import { TourneeApiService } from '../../../tournees/services/tournee-api.service';
 import { SidebarComponent } from '../../../../shared/components/sidebar/sidebar';
+import { AuthService, Role } from '../../../../core/auth/auth.service';
 
 interface SelectedEvent {
   id: string;
@@ -49,8 +50,9 @@ export class CollecteCalendarComponent implements OnInit {
 
   constructor(
     private tourneeApi: TourneeApiService,
+    private authService: AuthService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     setTimeout(() => {

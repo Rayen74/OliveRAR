@@ -360,7 +360,7 @@ export class UnitesRessourcesComponent implements OnInit {
       AFFECTE:        ['DISPONIBLE', 'EN_PANNE', 'HORS_SERVICE'],
       EN_MAINTENANCE: ['DISPONIBLE', 'HORS_SERVICE'],
       EN_PANNE:       ['EN_MAINTENANCE', 'HORS_SERVICE'],
-      HORS_SERVICE:   []
+      HORS_SERVICE:   ['DISPONIBLE']
     };
     const allowed = new Set(transitions[currentStatut] ?? []);
     return this.statuts.filter(s => allowed.has(s.value as UniteStatut));

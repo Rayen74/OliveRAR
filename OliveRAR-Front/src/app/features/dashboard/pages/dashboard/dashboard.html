@@ -124,7 +124,8 @@
           <div
             class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-x-3 gap-y-2 rounded-2xl border border-earth-border bg-earth-bg px-4 py-3 text-sm">
             <span class="text-earth-muted">Localisation</span>
-            <span class="text-right text-earth-text truncate" title="{{ selectedVerger.localisation }}">{{ selectedVerger.localisation || 'Non renseignée'
+            <span class="text-right text-earth-text truncate" title="{{ selectedVerger.localisation }}">{{
+              selectedVerger.localisation || 'Non renseignée'
               }}</span>
 
             <span class="text-earth-muted">Arbres</span>
@@ -140,7 +141,8 @@
             <span class="text-right text-earth-text truncate">{{ selectedVerger.rendementEstime }} kg</span>
 
             <span class="text-earth-muted">Coordonnées</span>
-            <span class="text-right text-earth-text truncate" title="{{ selectedVerger.latitude }} / {{ selectedVerger.longitude }}">{{ selectedVerger.latitude }} / {{
+            <span class="text-right text-earth-text truncate"
+              title="{{ selectedVerger.latitude }} / {{ selectedVerger.longitude }}">{{ selectedVerger.latitude }} / {{
               selectedVerger.longitude }}</span>
           </div>
         </div>

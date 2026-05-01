@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/verger")
@@ -28,8 +27,7 @@ public class VergerController {
     @GetMapping
     public Object getAll(
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer limit
-    ) {
+            @RequestParam(required = false) Integer limit) {
         if (page != null || limit != null) {
             return vergerService.getAllPaginated(page != null ? page : 1, limit != null ? limit : 5);
         }
@@ -41,14 +39,12 @@ public class VergerController {
     public Object getByAgriculteur(
             @PathVariable String agriculteurId,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer limit
-    ) {
+            @RequestParam(required = false) Integer limit) {
         if (page != null || limit != null) {
             return vergerService.getByAgriculteurPaginated(
                     agriculteurId,
                     page != null ? page : 1,
-                    limit != null ? limit : 5
-            );
+                    limit != null ? limit : 5);
         }
 
         return vergerService.getByAgriculteur(agriculteurId);

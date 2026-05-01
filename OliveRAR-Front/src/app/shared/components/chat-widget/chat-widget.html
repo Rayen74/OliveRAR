@@ -1,0 +1,87 @@
+<!-- FAB Trigger Button -->
+<button
+  id="chat-fab-button"
+  (click)="toggleChat()"
+  class="chat-fab"
+  [class.chat-fab--open]="isOpen"
+  aria-label="Ouvrir l'assistant IA">
+  <span class="chat-fab__icon chat-fab__icon--open">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+    </svg>
+  </span>
+  <span class="chat-fab__icon chat-fab__icon--close" *ngIf="isOpen">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+    </svg>
+  </span>
+</button>
+
+<!-- Chat Panel -->
+<div class="chat-panel" [class.chat-panel--visible]="isOpen" role="dialog" aria-label="Assistant OliveRAR">
+
+  <!-- Header -->
+  <div class="chat-header">
+    <div class="chat-header__info">
+      <div class="chat-header__avatar">🫒</div>
+      <div>
+        <p class="chat-header__name">Assistant OliveRAR</p>
+        <p class="chat-header__status">
+          <span class="chat-header__dot" [class.chat-header__dot--typing]="isTyping"></span>
+          {{ isTyping ? 'En train d\'écrire…' : 'En ligne' }}
+        </p>
+      </div>
+    </div>
+    <button class="chat-header__close" (click)="toggleChat()" aria-label="Fermer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div class="chat-messages" #messagesContainer>
+    <div
+      *ngFor="let msg of messages"
+      class="chat-message"
+      [class.chat-message--user]="msg.role === 'user'"
+      [class.chat-message--assistant]="msg.role === 'assistant'">
+      <div class="chat-message__avatar" *ngIf="msg.role === 'assistant'">🫒</div>
+      <div class="chat-message__bubble">
+        <p class="chat-message__text">{{ msg.content }}</p>
+        <span class="chat-message__time">{{ msg.timestamp | date:'HH:mm' }}</span>
+      </div>
+    </div>
+
+    <!-- Typing indicator -->
+    <div class="chat-message chat-message--assistant" *ngIf="isTyping">
+      <div class="chat-message__avatar">🫒</div>
+      <div class="chat-message__bubble chat-message__bubble--typing">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="chat-input">
+    <textarea
+      id="chat-input-field"
+      [(ngModel)]="userInput"
+      (keydown)="onKeydown($event)"
+      placeholder="Posez votre question…"
+      rows="1"
+      class="chat-input__field"
+      [disabled]="isTyping">
+    </textarea>
+    <button
+      id="chat-send-button"
+      class="chat-input__send"
+      (click)="sendMessage()"
+      [disabled]="!userInput.trim() || isTyping"
+      aria-label="Envoyer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
+    </button>
+  </div>
+</div>

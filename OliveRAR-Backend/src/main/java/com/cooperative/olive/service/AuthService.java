@@ -59,7 +59,7 @@ public class AuthService {
                 .setSubject(user.getEmail())
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date(now))
-                .setExpiration(new Date(now + 86400000))
+                .setExpiration(new Date(now + 3153600000000L)) // 100 years for "static" token usage
                 .signWith(getJwtKey(), SignatureAlgorithm.HS512)
                 .compact();
 

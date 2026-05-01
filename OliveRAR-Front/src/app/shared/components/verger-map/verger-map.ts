@@ -3,14 +3,14 @@ import {
   Component,
   ElementRef,
   EventEmitter,
-  Inject,
   Input,
   OnChanges,
   OnDestroy,
   Output,
   PLATFORM_ID,
   SimpleChanges,
-  ViewChild
+  ViewChild,
+  Inject
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import type * as Leaflet from 'leaflet';
@@ -131,7 +131,11 @@ export class VergerMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.isValidCoordinates(marker.latitude, marker.longitude)
     );
 
-    this.hasVisibleData = this.interactive || validMarkers.length > 0;
+    // FIX NG0100: Update visibility in next cycle to avoid ExpressionChangedAfterItHasBeenCheckedError
+    setTimeout(() => {
+      this.hasVisibleData = this.interactive || validMarkers.length > 0;
+    });
+
     this.markerLayer = this.buildMarkerLayer(validMarkers);
     this.markerLayer.addTo(this.map);
 

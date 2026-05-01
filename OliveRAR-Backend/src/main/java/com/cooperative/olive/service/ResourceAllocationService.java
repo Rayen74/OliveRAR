@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
@@ -15,9 +15,6 @@ import com.cooperative.olive.entity.Tournee;
 import com.cooperative.olive.entity.Collecte;
 import com.cooperative.olive.entity.User;
 import com.cooperative.olive.dao.UserRepository;
-
-import com.cooperative.olive.dao.CollecteRepository;
-import com.cooperative.olive.dao.TourneeRepository;
 import com.cooperative.olive.dao.TypeRessourceRepository;
 import com.cooperative.olive.dao.UniteRepository;
 import com.cooperative.olive.entity.Affectation;
@@ -38,8 +35,6 @@ public class ResourceAllocationService {
 
     private final UniteRepository uniteRepository;
     private final TypeRessourceRepository typeRessourceRepository;
-    private final CollecteRepository collecteRepository;
-    private final TourneeRepository tourneeRepository;
     private final UserRepository userRepository;
     private final MongoTemplate mongoTemplate;
 
@@ -190,16 +185,7 @@ public class ResourceAllocationService {
                 && ACTIVE_ASSIGNMENT_STATUSES.contains(assignment.getStatutReservation().trim().toUpperCase());
     }
 
-    private void markUniteAssigned(String uniteId) {
-        Unite unite = uniteRepository.findById(uniteId)
-                .orElseThrow(() -> new ResourceNotFoundException("Unite introuvable: " + uniteId));
-        if (unite.getStatut() == UniteStatut.DISPONIBLE) {
-            unite.setStatut(UniteStatut.AFFECTE);
-            unite.setDisponibilite(false);
-            uniteRepository.save(unite);
-        }
-    }
-
+    
     public void releaseUniteIfUnused(String uniteId) {
         if (uniteId == null || hasActiveAssignment(uniteId)) {
             return;

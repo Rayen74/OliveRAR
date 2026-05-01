@@ -115,11 +115,16 @@ export class VergersComponent implements OnInit, OnDestroy {
     };
   }
 
+  get isAgriculteur(): boolean {
+    return this.user?.role === 'AGRICULTEUR';
+  }
+
+  get isManager(): boolean {
+    return this.user?.role === 'RESPONSABLE_COOPERATIVE' || this.user?.role === 'RESPONSABLE_LOGISTIQUE';
+  }
+
   loadVergers() {
-    const userId = this.user?.id;
-    if (!userId) {
-      return;
-    }
+    if (!this.user) return;
 
     const cacheKey = this.getPageCacheKey(this.currentPage, this.pageSize);
     const cachedPage = this.pageCache.get(cacheKey);
@@ -131,10 +136,13 @@ export class VergersComponent implements OnInit, OnDestroy {
 
     this.loading = true;
     this.error = '';
-    this.vergerApi.getByAgriculteurPaginated(userId, {
-      page: this.currentPage,
-      limit: this.pageSize
-    }).subscribe({
+
+    const params = { page: this.currentPage, limit: this.pageSize };
+    const data$ = this.isAgriculteur && this.user.id
+      ? this.vergerApi.getByAgriculteurPaginated(this.user.id, params)
+      : this.vergerApi.getAllPaginated(params);
+
+    data$.subscribe({
       next: (response) => {
         this.pageCache.set(cacheKey, response);
         this.applyPaginatedVergers(response);

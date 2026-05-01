@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService } from '../../../auth/auth.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { MenuItem } from '../../models/menu-item.model';
 import { NotificationService } from '../../services/notification';

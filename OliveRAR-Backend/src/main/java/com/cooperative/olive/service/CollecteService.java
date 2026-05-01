@@ -16,7 +16,6 @@ import com.cooperative.olive.exception.BusinessException;
 import com.cooperative.olive.exception.ResourceNotFoundException;
 import com.cooperative.olive.security.CurrentUserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -225,11 +224,7 @@ public class CollecteService {
         if (collecte.getAffectations() != null) {
             for (Affectation aff : collecte.getAffectations()) {
                 if ("HUMAIN".equals(aff.getTypeCible())) {
-                    User ouvrier = userRepository.findById(aff.getCibleId())
-                            .orElseThrow(() -> new ResourceNotFoundException("Ouvrier introuvable: " + aff.getCibleId()));
-                    if (ouvrier.getRole() != Role.OUVRIER) {
-                        throw new BusinessException("Tous les membres de l'equipe doivent avoir le role OUVRIER.");
-                    }
+                    throw new BusinessException("L'affectation des ouvriers doit se faire au niveau des tournées, pas des collectes individuelles.");
                 }
             }
         }

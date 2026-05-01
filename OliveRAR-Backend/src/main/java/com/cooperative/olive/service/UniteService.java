@@ -22,7 +22,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.cooperative.olive.entity.Affectation;
 import com.cooperative.olive.entity.Tournee;
 import com.cooperative.olive.entity.Collecte;
 
@@ -198,6 +197,11 @@ public class UniteService {
         String ancienStatut = unite.getStatut().name();
         unite.setStatut(nouveauStatut);
         unite.setDisponibilite(nouveauStatut == UniteStatut.DISPONIBLE);
+        
+        if (nouveauStatut == UniteStatut.HORS_SERVICE) {
+            removeUniteFromAllAssignments(unite.getId());
+        }
+
         ajouterHistorique(unite, "CHANGEMENT_STATUT",
                 (note != null && !note.isBlank()) ? note : "Changement de statut.", nouveauStatut);
         Unite saved = uniteRepository.save(unite);
@@ -225,9 +229,21 @@ public class UniteService {
         }
         unite.setStatut(UniteStatut.HORS_SERVICE);
         unite.setDisponibilite(false);
+        removeUniteFromAllAssignments(unite.getId());
         ajouterHistorique(unite, "DESACTIVATION",
                 (note != null && !note.isBlank()) ? note : "Mise hors service.", UniteStatut.HORS_SERVICE);
         return uniteRepository.save(unite);
+    }
+
+    private void removeUniteFromAllAssignments(String uniteId) {
+        if (uniteId == null || uniteId.isBlank()) return;
+
+        Query query = new Query(Criteria.where("affectations.cibleId").is(uniteId));
+        org.springframework.data.mongodb.core.query.Update update = new org.springframework.data.mongodb.core.query.Update()
+                .pull("affectations", Query.query(Criteria.where("cibleId").is(uniteId)));
+
+        mongoTemplate.updateMulti(query, update, Collecte.class);
+        mongoTemplate.updateMulti(query, update, Tournee.class);
     }
 
     public void supprimer(String id) {

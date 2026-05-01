@@ -109,6 +109,10 @@
                   class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100">
                   <span class="material-symbols-outlined text-sm">block</span>
                 </button>
+                <button *ngIf="u['statut'] === 'HORS_SERVICE'" (click)="openStatutModal(u)" title="Réactiver"
+                  class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                  <span class="material-symbols-outlined text-sm">settings_backup_restore</span>
+                </button>
                 <button *ngIf="u['statut'] === 'HORS_SERVICE'" (click)="openDeleteModal(u)" title="Supprimer"
                   class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-700 hover:bg-red-100">
                   <span class="material-symbols-outlined text-sm">delete</span>

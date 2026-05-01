@@ -42,7 +42,7 @@ public enum UniteStatut {
             case AFFECTE       -> cible == DISPONIBLE || cible == EN_PANNE || cible == HORS_SERVICE;
             case EN_MAINTENANCE -> cible == DISPONIBLE || cible == HORS_SERVICE;
             case EN_PANNE      -> cible == EN_MAINTENANCE || cible == HORS_SERVICE;
-            case HORS_SERVICE  -> false;
+            case HORS_SERVICE  -> cible == DISPONIBLE;
         };
     }
 }

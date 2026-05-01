@@ -63,7 +63,8 @@ public class TourneeController {
 
     @PostMapping("/{id}/collects")
     public ApiResponse<Tournee> addCollecte(@PathVariable String id, @RequestBody Map<String, String> payload) {
-        return ApiResponse.success("Collecte ajoutée à la tournée.", tourneeService.addCollecte(id, payload.get("collectId")));
+        return ApiResponse.success("Collecte ajoutée à la tournée.",
+                tourneeService.addCollecte(id, payload.get("collectId")));
     }
 
     @DeleteMapping("/{id}/collects/{collectId}")
