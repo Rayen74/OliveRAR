@@ -2,28 +2,16 @@
   <app-sidebar></app-sidebar>
 
   <main class="flex-1 overflow-y-auto p-8">
-    <header class="mb-8 flex items-center justify-between">
+    <header class="mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-earth-text">Tableau de bord Coopérative</h1>
-        <p class="text-sm text-earth-muted">Pilotage de la campagne et performance des récoltes.</p>
-      </div>
-
-      <div class="flex items-center gap-2 rounded-xl border border-earth-border bg-white p-1 shadow-sm">
-        <button
-          *ngFor="let p of ['day', 'week', 'month']"
-          (click)="onPeriodChange(p)"
-          [class.bg-olive-600]="selectedPeriod === p"
-          [class.text-white]="selectedPeriod === p"
-          [class.text-earth-muted]="selectedPeriod !== p"
-          class="rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all hover:bg-olive-50 hover:text-olive-700 active:scale-95">
-          {{ p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : 'Mois' }}
-        </button>
+        <h1 class="text-3xl font-bold text-earth-text">Tableau de bord Cooperative</h1>
+        <p class="text-sm text-earth-muted">Pilotage de la campagne et performance des recoltes.</p>
       </div>
     </header>
 
     <div *ngIf="loading && !kpis" class="flex flex-col items-center justify-center py-20">
       <div class="h-12 w-12 animate-spin rounded-full border-4 border-olive-600 border-t-transparent"></div>
-      <p class="mt-4 text-earth-muted">Mise à jour des indicateurs...</p>
+      <p class="mt-4 text-earth-muted">Mise a jour des indicateurs...</p>
     </div>
 
     <div *ngIf="error" class="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">
@@ -35,7 +23,7 @@
         <div class="relative overflow-hidden rounded-3xl border border-olive-100 bg-white p-8 shadow-sm transition-all hover:shadow-md">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs font-bold uppercase tracking-widest text-olive-600">Quantité Récoltée</p>
+              <p class="text-xs font-bold uppercase tracking-widest text-olive-600">Quantite recoltee</p>
               <p class="mt-2 text-4xl font-black text-earth-text">
                 {{ kpis.global.filtrable.quantity | number:'1.0-0' }}
                 <span class="text-lg font-medium text-earth-muted">kg</span>
@@ -46,7 +34,7 @@
             </div>
           </div>
           <p class="mt-4 text-xs text-earth-muted">
-            Total sur la période :
+            Total sur la periode :
             <span class="font-bold text-olive-700">{{ getSelectedPeriodLabel() }}</span>
           </p>
           <div class="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-olive-50/50"></div>
@@ -55,32 +43,32 @@
         <div class="relative overflow-hidden rounded-3xl border border-harvest-100 bg-white p-8 shadow-sm transition-all hover:shadow-md">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-xs font-bold uppercase tracking-widest text-harvest-600">Volume d'Activité</p>
+              <p class="text-xs font-bold uppercase tracking-widest text-harvest-600">Volume d'activite</p>
               <p class="mt-2 text-4xl font-black text-earth-text">
                 {{ kpis.global.filtrable.count }}
-                <span class="text-lg font-medium text-earth-muted">récoltes</span>
+                <span class="text-lg font-medium text-earth-muted">recoltes</span>
               </p>
             </div>
             <div class="rounded-2xl bg-harvest-50 p-4 text-harvest-600">
               <span class="material-symbols-outlined text-3xl">receipt_long</span>
             </div>
           </div>
-          <p class="mt-4 text-xs text-earth-muted">Nombre d'enregistrements sur la période.</p>
+          <p class="mt-4 text-xs text-earth-muted">Nombre d'enregistrements sur la periode.</p>
           <div class="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-harvest-50/50"></div>
         </div>
       </div>
 
       <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
         <div class="rounded-2xl border border-earth-border bg-white p-6 shadow-sm">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-earth-muted">Total Vergers</p>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-earth-muted">Total vergers</p>
           <p class="mt-1 text-2xl font-black text-earth-text">{{ kpis.global.totalVergers }}</p>
         </div>
         <div class="rounded-2xl border border-earth-border bg-white p-6 shadow-sm">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-earth-muted">Total Agriculteurs</p>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-earth-muted">Total agriculteurs</p>
           <p class="mt-1 text-2xl font-black text-earth-text">{{ kpis.global.totalAgriculteurs }}</p>
         </div>
         <div class="rounded-2xl border border-earth-border bg-white p-6 shadow-sm">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-earth-muted">Cumul Campagne</p>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-earth-muted">Cumul campagne</p>
           <p class="mt-1 text-2xl font-black text-olive-700">{{ kpis.global.totalHarvestedQuantity | number:'1.0-0' }} kg</p>
         </div>
       </div>
@@ -92,7 +80,20 @@
               <h2 class="text-xl font-bold text-earth-text">Rythme de Campagne</h2>
               <p class="text-xs text-earth-muted">{{ getTrendSubtitle() }}</p>
             </div>
-            <span class="material-symbols-outlined text-earth-muted">trending_up</span>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1 rounded-xl border border-earth-border bg-[#fcfaf4] p-1 shadow-sm">
+                <button
+                  *ngFor="let p of ['day', 'week', 'month']"
+                  (click)="onPeriodChange(p)"
+                  [class.bg-olive-600]="selectedPeriod === p"
+                  [class.text-white]="selectedPeriod === p"
+                  [class.text-earth-muted]="selectedPeriod !== p"
+                  class="rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all hover:bg-olive-50 hover:text-olive-700 active:scale-95">
+                  {{ p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : 'Mois' }}
+                </button>
+              </div>
+              <span class="material-symbols-outlined text-earth-muted">trending_up</span>
+            </div>
           </div>
 
           <div class="flex h-64 w-full gap-4">
@@ -137,7 +138,7 @@
               </div>
 
               <div *ngIf="!kpis.performance.harvestTrend?.length" class="absolute inset-0 flex items-center justify-center text-sm italic text-earth-muted">
-                En attente de données hebdomadaires...
+                En attente de donnees...
               </div>
             </div>
           </div>
@@ -154,21 +155,21 @@
           <div class="rounded-3xl border border-earth-border bg-white p-8 shadow-sm">
             <h2 class="mb-6 text-sm font-black uppercase tracking-widest text-earth-muted">Objectifs</h2>
             <div class="mb-2 flex items-center justify-between">
-              <span class="text-xs font-bold text-earth-text">Récolte vs Estimé</span>
+              <span class="text-xs font-bold text-earth-text">Recolte vs Estime</span>
               <span class="text-sm font-black text-olive-700">{{ kpis.performance.harvestProgress | number:'1.1-1' }}%</span>
             </div>
             <div class="h-3 w-full overflow-hidden rounded-full bg-earth-bg">
               <div class="h-full bg-olive-600 transition-all duration-1000" [style.width.%]="kpis.performance.harvestProgress"></div>
             </div>
             <p class="mt-4 text-[10px] leading-relaxed text-earth-muted">
-              Basé sur un rendement total estimé de
+              Base sur un rendement total estime de
               <span class="font-bold text-earth-text">{{ kpis.performance.totalEstimatedYield | number:'1.0-0' }} kg</span>
               pour l'ensemble des vergers.
             </p>
           </div>
 
           <div class="rounded-3xl border border-earth-border bg-white p-8 shadow-sm">
-            <h2 class="mb-6 text-sm font-black uppercase tracking-widest text-earth-muted">Alertes Actives</h2>
+            <h2 class="mb-6 text-sm font-black uppercase tracking-widest text-earth-muted">Alertes actives</h2>
             <div class="space-y-4">
               <div *ngFor="let severity of ['CRITIQUE', 'MOYENNE', 'FAIBLE']" class="flex items-center gap-3">
                 <div class="h-2 w-2 rounded-full" [style.backgroundColor]="getSeverityColor(severity)"></div>
