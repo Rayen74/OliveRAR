@@ -4,6 +4,14 @@ export enum AttendanceStatus {
   RETARD = 'RETARD'
 }
 
+export enum UniteStatut {
+  DISPONIBLE = 'DISPONIBLE',
+  AFFECTE = 'AFFECTE',
+  EN_MAINTENANCE = 'EN_MAINTENANCE',
+  EN_PANNE = 'EN_PANNE',
+  HORS_SERVICE = 'HORS_SERVICE'
+}
+
 export enum CheckStatus {
   OK = 'OK',
   PROBLEME = 'PROBLEME'
@@ -17,8 +25,9 @@ export interface ChecklistItem {
 export interface ResourceCheck {
   resourceUnitId: string;
   label: string;
+  currentUnitStatus?: string; 
   items: ChecklistItem[];
-  statutGlobal?: CheckStatus;
+  statutGlobal?: UniteStatut; // Updated to use UniteStatut
   noteIncident?: string;
 }
 

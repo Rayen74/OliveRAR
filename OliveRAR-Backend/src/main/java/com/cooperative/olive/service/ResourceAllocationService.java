@@ -106,7 +106,7 @@ public class ResourceAllocationService {
 
     private void validateSingleAssignment(Affectation assignment, String ownerType, String ownerId) {
         if (assignment.getCibleId() == null || assignment.getCibleId().isBlank()) {
-            throw new BusinessException("L'unite de ressource est obligatoire.");
+            throw new BusinessException("L'ID de la cible est obligatoire.");
         }
         if (assignment.getStartTime() == null || assignment.getEndTime() == null || !assignment.getEndTime().isAfter(assignment.getStartTime())) {
             throw new BusinessException("Le creneau horaire de l'affectation est invalide.");
@@ -115,21 +115,32 @@ public class ResourceAllocationService {
             throw new BusinessException("Le statut de l'affectation est invalide.");
         }
 
-        Unite unite = uniteRepository.findById(assignment.getCibleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Unite introuvable: " + assignment.getCibleId()));
+        if ("HUMAIN".equals(assignment.getTypeCible())) {
+            User user = userRepository.findById(assignment.getCibleId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Ouvrier introuvable: " + assignment.getCibleId()));
+            
+            // Check overlaps for Human
+            if (isActiveAssignment(assignment) && isUniteOverlapping(assignment.getCibleId(), assignment.getStartTime(), assignment.getEndTime(), ownerType, ownerId)) {
+                throw new BusinessException("Conflit horaire detecte pour l'ouvrier " + user.getNom() + ".");
+            }
+        } else {
+            Unite unite = uniteRepository.findById(assignment.getCibleId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Unite introuvable: " + assignment.getCibleId()));
 
-        if (unite.getStatut() == UniteStatut.EN_MAINTENANCE || unite.getStatut() == UniteStatut.EN_PANNE || unite.getStatut() == UniteStatut.HORS_SERVICE) {
-            throw new BusinessException("L'unite " + unite.getCodeUnique() + " n'est pas disponible (statut: " + unite.getStatut().name() + ").");
-        }
+            if (unite.getStatut() == UniteStatut.EN_MAINTENANCE || unite.getStatut() == UniteStatut.EN_PANNE || unite.getStatut() == UniteStatut.HORS_SERVICE) {
+                throw new BusinessException("L'unite " + unite.getCodeUnique() + " n'est pas disponible (statut: " + unite.getStatut().name() + ").");
+            }
 
-        if (isActiveAssignment(assignment) && isUniteOverlapping(assignment.getCibleId(), assignment.getStartTime(), assignment.getEndTime(), ownerType, ownerId)) {
-            throw new BusinessException("Conflit horaire detecte pour l'unite " + unite.getCodeUnique() + ".");
+            if (isActiveAssignment(assignment) && isUniteOverlapping(assignment.getCibleId(), assignment.getStartTime(), assignment.getEndTime(), ownerType, ownerId)) {
+                throw new BusinessException("Conflit horaire detecte pour l'unite " + unite.getCodeUnique() + ".");
+            }
         }
     }
 
     private Affectation normalizeAssignment(Affectation assignment) {
         Affectation norm = new Affectation();
         norm.setCibleId(assignment.getCibleId());
+        norm.setTypeCible(assignment.getTypeCible() == null ? "MACHINE" : assignment.getTypeCible());
         norm.setStartTime(assignment.getStartTime());
         norm.setEndTime(assignment.getEndTime());
         norm.setStatutReservation(assignment.getStatutReservation() == null ? "PLANIFIEE" : assignment.getStatutReservation().trim().toUpperCase());

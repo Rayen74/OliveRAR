@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SidebarComponent } from '../../../../shared/components/sidebar/sidebar';
@@ -6,14 +6,15 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, switchMap, tap } from 'rxjs/operators';
 import { CollecteApiService } from '../../../collectes/services/collecte-api.service';
 import type { Collecte } from '../../../collectes/models/collecte.model';
-import { AttendanceStatus, CheckStatus } from '../../models/recolte.model';
+import { AttendanceStatus, CheckStatus, UniteStatut } from '../../models/recolte.model';
 import type { Recolte, ResourceCheck, WorkerAttendance } from '../../models/recolte.model';
 import { RecolteService } from '../../services/recolte.service';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { UniteApiService } from '../../../ressources/services/unite-api.service';
+import { SignalementApiService } from '../../../signalements/services/signalement-api.service';
 
 interface HarvestDataExtended extends Recolte {
-
   attendance: (WorkerAttendance & { heureTime: string })[];
 }
 
@@ -27,12 +28,15 @@ interface HarvestDataExtended extends Recolte {
 export class ChefRecolteToursComponent implements OnInit {
   private readonly collecteApi = inject(CollecteApiService);
   private readonly recolteService = inject(RecolteService);
+  private readonly uniteApi = inject(UniteApiService);
+  private readonly signalementApi = inject(SignalementApiService);
   private readonly toast = inject(ToastService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   private refreshTrigger$ = new BehaviorSubject<void>(undefined);
-  collectesData$: Observable<import('../../../collectes/models/collecte.model').PaginatedCollecteResponse> | undefined;
+  collectesData$: Observable<any> | undefined;
 
   isLoading = false;
   isSubmitting = false;
@@ -45,13 +49,27 @@ export class ChefRecolteToursComponent implements OnInit {
   totalPages = 1;
 
   showModal = false;
+  showSignalementModal = false;
+  selectedResourceForSignalement: ResourceCheck | null = null;
+  signalementType: 'MACHINE' | 'VERGER' = 'MACHINE';
   activeStep: 'Production' | 'Présences' | 'Matériel' = 'Production';
   readonly steps: ('Production' | 'Présences' | 'Matériel')[] = ['Production', 'Présences', 'Matériel'];
   selectedCollecte: Collecte | null = null;
+  
   readonly AttendanceStatus = AttendanceStatus;
+  readonly UniteStatut = UniteStatut;
+  readonly CheckStatus = CheckStatus;
 
   harvestData: HarvestDataExtended = this.initHarvestData();
   filterForm: FormGroup;
+  
+  // Signalement form
+  signalementForm: FormGroup = this.fb.group({
+    issueType: ['AUTRE'],
+    description: [''],
+    latitude: [0],
+    longitude: [0]
+  });
 
   constructor() {
     this.filterForm = this.fb.group({
@@ -118,10 +136,13 @@ export class ChefRecolteToursComponent implements OnInit {
         this.prepareHarvestData(fullCollecte);
         this.showModal = true;
         this.isLoading = false;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
       error: () => {
         this.toast.error('Erreur lors de la récupération des détails.');
         this.isLoading = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -152,12 +173,9 @@ export class ChefRecolteToursComponent implements OnInit {
       .map(a => ({
         resourceUnitId: a.cibleId,
         label: a.resource?.name || a.cibleId,
-        items: [
-          { label: 'État général', checked: true },
-          { label: 'Propreté', checked: true },
-          { label: 'Fonctionnement', checked: true }
-        ],
-        statutGlobal: CheckStatus.OK
+        currentUnitStatus: a.resource?.status,
+        items: [],
+        statutGlobal: a.resource?.status as UniteStatut || UniteStatut.DISPONIBLE
       }));
 
     // Try to load existing harvest if any
@@ -165,18 +183,94 @@ export class ChefRecolteToursComponent implements OnInit {
       this.recolteService.getByTourId(collecte.tourneeId).subscribe({
         next: (existing) => {
           if (existing) {
+            // Merge existing data but keep currentUnitStatus from the prepared ones
+            const mergedResourceChecks = this.harvestData.resourceChecks.map(prepared => {
+              const saved = existing.resourceChecks.find(r => r.resourceUnitId === prepared.resourceUnitId);
+              return saved ? { ...saved, currentUnitStatus: prepared.currentUnitStatus } : prepared;
+            });
+
             this.harvestData = {
               ...existing,
               attendance: existing.attendance.map(a => ({
                 ...a,
                 heureTime: a.heurePointage ? new Date(a.heurePointage).toTimeString().slice(0, 5) : this.getCurrentTime()
-              }))
+              })),
+              resourceChecks: mergedResourceChecks
             };
+            this.cdr.detectChanges();
           }
         },
         error: () => {} 
       });
     }
+  }
+
+  onUnitStatusChange(check: ResourceCheck, newStatus: UniteStatut): void {
+    if (!check.resourceUnitId) return;
+    
+    this.uniteApi.changerStatut(check.resourceUnitId, newStatus, 'Mis à jour pendant la récolte').subscribe({
+      next: () => {
+        check.statutGlobal = newStatus;
+        check.currentUnitStatus = newStatus;
+        this.toast.success(`Statut de ${check.label} mis à jour en ${this.formatUnitStatus(newStatus)}`);
+        
+        // If status is PANNE or MAINTENANCE, suggest creating a signalement
+        if (newStatus === UniteStatut.EN_PANNE || newStatus === UniteStatut.EN_MAINTENANCE) {
+           this.openSignalement(check);
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.toast.error('Action non autorisée ou erreur serveur.');
+      }
+    });
+  }
+
+  openSignalement(check: ResourceCheck): void {
+    this.signalementType = 'MACHINE';
+    this.selectedResourceForSignalement = check;
+    this.signalementForm.patchValue({
+      issueType: 'PANNE_MATERIELLE',
+      description: `Incident signalé sur l'unité ${check.label} pendant la récolte au verger ${this.selectedCollecte?.vergerNom}.`,
+      latitude: this.selectedCollecte?.latitude || 0,
+      longitude: this.selectedCollecte?.longitude || 0
+    });
+    this.showSignalementModal = true;
+    this.cdr.detectChanges();
+  }
+
+  openVergerSignalement(): void {
+    this.signalementType = 'VERGER';
+    this.selectedResourceForSignalement = null;
+    this.signalementForm.patchValue({
+      issueType: 'MALADIE_OU_PARASITE',
+      description: `Problème signalé sur le verger ${this.selectedCollecte?.vergerNom} pendant la récolte.`,
+      latitude: this.selectedCollecte?.latitude || 0,
+      longitude: this.selectedCollecte?.longitude || 0
+    });
+    this.showSignalementModal = true;
+    this.cdr.detectChanges();
+  }
+
+  submitSignalement(): void {
+    if (!this.selectedCollecte?.vergerId) return;
+    
+    const payload = {
+      ...this.signalementForm.value,
+      vergerId: this.selectedCollecte.vergerId,
+      status: 'NOUVEAU'
+    };
+
+    this.signalementApi.create(payload).subscribe({
+      next: () => {
+        this.toast.success('Signalement créé avec succès.');
+        this.showSignalementModal = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.toast.error('Erreur lors de la création du signalement.');
+      }
+    });
   }
 
   private initHarvestData(): HarvestDataExtended {
@@ -194,10 +288,6 @@ export class ChefRecolteToursComponent implements OnInit {
     return new Date().toTimeString().slice(0, 5);
   }
 
-  isCheckOk(check: ResourceCheck): boolean {
-    return check.items.every(i => i.checked);
-  }
-
   getWorkerCount(collecte: any): number {
     return collecte.equipe?.length || 0;
   }
@@ -205,7 +295,6 @@ export class ChefRecolteToursComponent implements OnInit {
   saveHarvest(): void {
     this.isSubmitting = true;
 
-    // Convert heureTime back to Date objects
     const finalData: Recolte = {
       ...this.harvestData,
       attendance: this.harvestData.attendance.map(a => {
@@ -240,6 +329,28 @@ export class ChefRecolteToursComponent implements OnInit {
     } else {
       this.toast.error('Aucune tournée associée à cette collecte.');
     }
+  }
+
+  formatStatut(statut: string): string {
+    const map: Record<string, string> = {
+      PLANIFIEE: 'Planifiée',
+      EN_COURS: 'En cours',
+      TERMINEE: 'Terminée',
+      ANNULEE: 'Annulée',
+    };
+    return map[statut] ?? statut;
+  }
+
+  formatUnitStatus(statut: string | undefined): string {
+    if (!statut) return 'Inconnu';
+    const map: Record<string, string> = {
+      DISPONIBLE: 'Opérationnel',
+      EN_SERVICE: 'En service',
+      EN_MAINTENANCE: 'Maintenance',
+      EN_PANNE: 'En panne',
+      HORS_SERVICE: 'HS'
+    };
+    return map[statut] ?? statut;
   }
 
   closeModal(): void {

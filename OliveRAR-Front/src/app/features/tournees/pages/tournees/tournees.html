@@ -54,10 +54,10 @@
             <p class="text-sm text-earth-muted">Fin : {{ tournee.plannedEndTime | date:'short' }}</p>
             <p class="mt-2 text-sm text-earth-muted flex flex-wrap gap-1">
               <span class="font-medium">Ressources :</span>
-              <span *ngFor="let aff of tournee.affectations; let last = last" class="text-olive-700">
+              <span *ngFor="let aff of getMachineAffectations(tournee.affectations || []); let last = last" class="text-olive-700">
                 {{ resourceLabel(aff.cibleId, aff) }}{{ !last ? ',' : '' }}
               </span>
-              <span *ngIf="!tournee.affectations?.length" class="italic text-gray-400">Aucune</span>
+              <span *ngIf="!getMachineAffectations(tournee.affectations || []).length" class="italic text-gray-400">Aucune</span>
             </p>
             <p class="text-sm text-earth-muted">Ouvriers mobilisés : {{ tournee.equipe?.length || 0 }}</p>
           </div>
@@ -281,8 +281,8 @@
 
         <div class="rounded-lg border border-earth-border bg-olive-50/30 p-4">
           <p class="font-semibold text-earth-text">Ressources communes (Partagées)</p>
-          <div *ngIf="selectedDetails.affectations?.length; else noShared" class="mt-3 space-y-2">
-            <div *ngFor="let aff of selectedDetails.affectations" class="flex items-center justify-between rounded-lg bg-white p-3 border border-earth-border shadow-sm">
+          <div *ngIf="getMachineAffectations(selectedDetails.affectations || []).length; else noShared" class="mt-3 space-y-2">
+            <div *ngFor="let aff of getMachineAffectations(selectedDetails.affectations || [])" class="flex items-center justify-between rounded-lg bg-white p-3 border border-earth-border shadow-sm">
               <div class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-olive-600">
                   {{ aff.typeCible === 'MACHINE' ? 'agriculture' : 'person' }}
@@ -417,45 +417,68 @@
       </div>
 
       <div class="space-y-6">
+        <!-- Équipe (Ouvriers) -->
+        <div class="space-y-2">
+          <p class="text-xs font-bold uppercase tracking-wider text-earth-muted flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">groups</span> Équipe (Ouvriers mobilisés)
+          </p>
+          <div *ngIf="getHumanAffectations(summarySharedAssignments || []).length || getHumanAffectations(targetCollecteForResources?.affectations || []).length; else noHumans" class="grid grid-cols-1 gap-2">
+            <div *ngFor="let aff of getHumanAffectations(summarySharedAssignments || [])" class="flex items-center justify-between rounded-lg bg-olive-50/50 p-2 border border-olive-100">
+              <span class="text-xs font-medium text-olive-900">{{ resourceLabel(aff.cibleId, aff) }} (Partagé)</span>
+            </div>
+            <div *ngFor="let aff of getHumanAffectations(targetCollecteForResources?.affectations || [])" class="flex items-center justify-between rounded-lg bg-blue-50/50 p-2 border border-blue-100">
+              <span class="text-xs font-medium text-blue-900">{{ resourceLabel(aff.cibleId, aff) }} (Spécifique)</span>
+            </div>
+          </div>
+          <ng-template #noHumans>
+            <p class="text-xs text-earth-muted italic p-2">Aucun ouvrier rattaché.</p>
+          </ng-template>
+        </div>
+
         <!-- Ressources de la Tournée (Partagées) -->
         <div class="space-y-2">
           <p class="text-xs font-bold uppercase tracking-wider text-earth-muted flex items-center gap-2">
-            <span class="material-symbols-outlined text-sm">groups</span> Ressources Partagées (Héritées de la tournée)
+            <span class="material-symbols-outlined text-sm">agriculture</span> Unités Partagées (Héritées de la tournée)
           </p>
-          <div *ngIf="summarySharedAssignments.length; else noShared" class="grid grid-cols-1 gap-2">
-            <div *ngFor="let aff of summarySharedAssignments" class="flex items-center justify-between rounded-lg bg-olive-50/50 p-3 border border-olive-100">
+          <div *ngIf="getMachineAffectations(summarySharedAssignments || []).length; else noShared" class="grid grid-cols-1 gap-2">
+            <div *ngFor="let aff of getMachineAffectations(summarySharedAssignments || [])" class="flex items-center justify-between rounded-lg bg-olive-50/50 p-3 border border-olive-100">
               <span class="text-sm font-medium text-olive-900">{{ resourceLabel(aff.cibleId, aff) }}</span>
               <span class="text-xs text-olive-700 italic">Prévu : {{ aff.startTime | date:'shortTime' }}</span>
             </div>
           </div>
           <ng-template #noShared>
-            <p class="text-xs text-earth-muted italic p-2">Aucune ressource partagée sur cette tournée.</p>
+            <p class="text-xs text-earth-muted italic p-2">Aucune unité partagée.</p>
           </ng-template>
         </div>
 
         <!-- Ressources Exceptionnelles (Spécifiques) -->
         <div class="space-y-2">
           <p class="text-xs font-bold uppercase tracking-wider text-earth-muted flex items-center gap-2">
-            <span class="material-symbols-outlined text-sm">stars</span> Ressources Spécifiques (À cette collecte)
+            <span class="material-symbols-outlined text-sm">stars</span> Unités Spécifiques (À cette collecte)
           </p>
-          <div *ngIf="targetCollecteForResources?.affectations?.length; else noSpec" class="grid grid-cols-1 gap-2">
-            <div *ngFor="let aff of targetCollecteForResources?.affectations" class="flex items-center justify-between rounded-lg bg-blue-50/50 p-3 border border-blue-100">
+          <div *ngIf="getMachineAffectations(targetCollecteForResources?.affectations || []).length; else noSpec" class="grid grid-cols-1 gap-2">
+            <div *ngFor="let aff of getMachineAffectations(targetCollecteForResources?.affectations || [])" class="flex items-center justify-between rounded-lg bg-blue-50/50 p-3 border border-blue-100">
               <span class="text-sm font-medium text-blue-900">{{ resourceLabel(aff.cibleId, aff) }}</span>
               <span class="text-xs text-blue-700 italic">{{ aff.startTime | date:'shortTime' }}</span>
             </div>
           </div>
           <ng-template #noSpec>
-            <p class="text-xs text-earth-muted italic p-2">Aucune ressource spécifique ajoutée.</p>
+            <p class="text-xs text-earth-muted italic p-2">Aucune unité spécifique.</p>
           </ng-template>
         </div>
 
         <!-- Total -->
         <div class="rounded-xl bg-earth-bg/50 p-4 border border-earth-border">
           <div class="flex items-center justify-between">
-            <p class="text-sm font-bold text-earth-text">Total des effectifs mobilisés</p>
-            <span class="rounded-full bg-olive-600 px-3 py-1 text-xs font-bold text-white">
-              {{ summarySharedAssignments.length + (targetCollecteForResources?.affectations?.length || 0) }} ressource(s)
-            </span>
+            <p class="text-sm font-bold text-earth-text">Total Mobilisé</p>
+            <div class="flex gap-2">
+              <span class="rounded-full bg-olive-600 px-3 py-1 text-[10px] font-bold text-white">
+                {{ getHumanAffectations(summarySharedAssignments || []).length + getHumanAffectations(targetCollecteForResources?.affectations || []).length }} Ouvrier(s)
+              </span>
+              <span class="rounded-full bg-blue-600 px-3 py-1 text-[10px] font-bold text-white">
+                {{ getMachineAffectations(summarySharedAssignments || []).length + getMachineAffectations(targetCollecteForResources?.affectations || []).length }} Unité(s)
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -30,7 +30,7 @@ export class SidebarService {
       { link: '/responsable-logistique/unites', label: 'Unités', icon: 'precision_manufacturing' },
       { link: '/responsable-logistique/collectes', label: 'Collectes', icon: 'event' },
       { link: '/responsable-logistique/tournees', label: 'Tournées', icon: 'route' },
-      { link: '/responsable/tournees/calendrier', label: 'Calendrier logistique', icon: 'calendar_month' },
+      { link: '/responsable-logistique/calendrier', label: 'Calendrier logistique', icon: 'calendar_month' },
       { link: '/responsable-logistique/activites', label: 'Mes activités', icon: 'history_edu' },
       { link: '/responsable-logistique/profile', label: 'Mon Profil', icon: 'person' }
     ],

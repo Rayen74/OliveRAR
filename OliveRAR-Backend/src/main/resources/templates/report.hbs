@@ -1,86 +1,97 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Rapport de Tournée - {{tourCode}}</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; padding: 20px; }
-        .header { text-align: center; border-bottom: 2px solid #4a7c2c; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { color: #4a7c2c; margin: 0; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px; }
-        .section-title { background: #4a7c2c; color: white; padding: 8px 15px; border-radius: 4px; margin-top: 25px; margin-bottom: 10px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f2f2f2; font-weight: 600; }
-        .statut-ok { color: #2e7d32; font-weight: bold; }
-        .statut-probleme { color: #c62828; font-weight: bold; }
-        .statut-absent { color: #757575; }
-        .footer { margin-top: 40px; text-align: center; font-size: 0.9em; color: #777; border-top: 1px solid #ddd; padding-top: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #3d3225; line-height: 1.6; padding: 20px; background-color: #faf8f4; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; border: 1px solid #d6ceb8; }
+        .header { text-align: center; border-bottom: 3px solid #8a9e3a; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { color: #8a9e3a; margin: 0; font-size: 28px; letter-spacing: 1px; }
+        .info-grid { margin-bottom: 30px; background: #f4f6e8; padding: 20px; border-radius: 8px; border: 1px solid #dde4b0; }
+        .info-table { width: 100%; border: none; }
+        .info-table td { border: none; padding: 5px 0; }
+        .section-title { background: #5f6e27; color: white; padding: 10px 15px; border-radius: 6px; margin-top: 30px; margin-bottom: 15px; font-weight: bold; font-size: 16px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 25px; background: white; }
+        th, td { border: 1px solid #d6ceb8; padding: 14px; text-align: left; }
+        th { background-color: #f0ece3; color: #3d3225; font-weight: 700; font-size: 13px; text-transform: uppercase; }
+        .statut-PRESENT, .statut-OK { color: #166534; font-weight: bold; }
+        .statut-ABSENT, .statut-PROBLEME { color: #991b1b; font-weight: bold; }
+        .statut-RETARD { color: #c47c18; font-weight: bold; }
+        .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #8c7d62; border-top: 1px solid #d6ceb8; padding-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>RAPPORT DE TOURNÉE</h1>
-        <p>OliveRAR - Gestion de Récolte</p>
-    </div>
+    <div class="container">
+        <div class="header">
+            <h1>RAPPORT DE TOURNÉE</h1>
+            <p>OliveRAR - Gestion de Récolte</p>
+        </div>
 
-    <div class="info-grid">
-        <div><strong>Code Tournée :</strong> {{tourCode}}</div>
-        <div><strong>Date :</strong> {{date}}</div>
-        <div><strong>Chef de Récolte :</strong> {{chefNom}}</div>
-        <div><strong>Production Totale :</strong> {{production.quantite}} {{production.unite}}</div>
-    </div>
+        <div class="info-grid">
+            <table class="info-table">
+                <tr>
+                    <td width="50%"><strong>Code Tournée :</strong> {{tourCode}}</td>
+                    <td width="50%"><strong>Date :</strong> {{date}}</td>
+                </tr>
+                <tr>
+                    <td><strong>Chef de Récolte :</strong> {{chefNom}}</td>
+                    <td><strong>Production Totale :</strong> {{production.quantite}} {{production.unite}}</td>
+                </tr>
+            </table>
+        </div>
 
-    <div class="section-title">PRÉSENCE DES OUVRIERS</div>
-    <table>
-        <thead>
-            <tr>
-                <th>Nom de l'Ouvrier</th>
-                <th>Statut</th>
-                <th>Heure de Pointage</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{#each presences}}
-            <tr>
-                <td>{{nom}}</td>
-                <td><span class="statut-{{statut}}">{{statut}}</span></td>
-                <td>{{heure}}</td>
-            </tr>
-            {{/each}}
-        </tbody>
-    </table>
+        <div class="section-title">PRÉSENCE DES OUVRIERS</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nom de l'Ouvrier</th>
+                    <th>Statut</th>
+                    <th>Heure de Pointage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each presences}}
+                <tr>
+                    <td>{{nom}}</td>
+                    <td><span class="statut-{{statut}}">{{statut}}</span></td>
+                    <td>{{heure}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
 
-    <div class="section-title">VÉRIFICATION DU MATÉRIEL</div>
-    <table>
-        <thead>
-            <tr>
-                <th>Ressource / Unité</th>
-                <th>État Global</th>
-                <th>Notes / Incidents</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{#each materiel}}
-            <tr>
-                <td>{{nom}}</td>
-                <td><span class="statut-{{etat}}">{{etat}}</span></td>
-                <td>{{note}}</td>
-            </tr>
-            {{/each}}
-        </tbody>
-    </table>
+        <div class="section-title">VÉRIFICATION DU MATÉRIEL</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ressource / Unité</th>
+                    <th>État Global</th>
+                    <th>Notes / Incidents</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each materiel}}
+                <tr>
+                    <td>{{nom}}</td>
+                    <td><span class="statut-{{etat}}">{{etat}}</span></td>
+                    <td>{{note}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
 
-    {{#if notes}}
-    <div class="section-title">NOTES ET INCIDENTS GLOBAUX</div>
-    <div style="background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 4px;">
-        {{notes}}
-    </div>
-    {{/if}}
+        {{#if notes}}
+        <div class="section-title">NOTES ET INCIDENTS GLOBAUX</div>
+        <div style="background: #fff; border: 1px solid #d6ceb8; padding: 15px; border-radius: 6px; font-size: 14px;">
+            {{notes}}
+        </div>
+        {{/if}}
 
-    <div class="footer">
-        Document généré automatiquement par OliveRAR Platform le {{date}}.<br>
-        © 2026 Cooperative Agricole - Tous droits réservés.
+        <div class="footer">
+            Document généré automatiquement par OliveRAR Platform le {{date}}.<br />
+            © 2026 Cooperative Agricole - Tous droits réservés.
+        </div>
     </div>
 </body>
 </html>

@@ -96,15 +96,43 @@ public class TourneeService {
     }
 
     private Map<String, Object> toSummary(Tournee t) {
-        return Map.of(
-                "id", t.getId(),
-                "name", t.getName(),
-                "collecteIds", t.getCollecteIds(),
-                "plannedStartTime", t.getPlannedStartTime() != null ? t.getPlannedStartTime() : "",
-                "plannedEndTime", t.getPlannedEndTime() != null ? t.getPlannedEndTime() : "",
-                "status", t.getStatus(),
-                "optimizationEnabled", t.getOptimizationEnabled() != null && t.getOptimizationEnabled(),
-                "affectations", resourceAllocationService.enrichAssignments(t.getAffectations()));
+        List<Map<String, String>> equipe = new ArrayList<>();
+        // 1. Direct assignments
+        if (t.getAffectations() != null) {
+            for (Affectation aff : t.getAffectations()) {
+                if ("HUMAIN".equals(aff.getTypeCible())) {
+                    userRepository.findById(aff.getCibleId()).ifPresent(user -> equipe.add(toEquipeMember(user)));
+                }
+            }
+        }
+        // 2. From collectes
+        if (t.getCollecteIds() != null) {
+            for (String cid : t.getCollecteIds()) {
+                collecteRepository.findById(cid).ifPresent(c -> {
+                    if (c.getAffectations() != null) {
+                        for (Affectation aff : c.getAffectations()) {
+                            if ("HUMAIN".equals(aff.getTypeCible())) {
+                                if (equipe.stream().noneMatch(m -> m.get("id").equals(aff.getCibleId()))) {
+                                    userRepository.findById(aff.getCibleId()).ifPresent(user -> equipe.add(toEquipeMember(user)));
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("id", t.getId());
+        summary.put("name", t.getName());
+        summary.put("collecteIds", t.getCollecteIds() != null ? t.getCollecteIds() : List.of());
+        summary.put("plannedStartTime", t.getPlannedStartTime() != null ? t.getPlannedStartTime() : "");
+        summary.put("plannedEndTime", t.getPlannedEndTime() != null ? t.getPlannedEndTime() : "");
+        summary.put("status", t.getStatus());
+        summary.put("optimizationEnabled", t.getOptimizationEnabled() != null && t.getOptimizationEnabled());
+        summary.put("affectations", resourceAllocationService.enrichAssignments(t.getAffectations()));
+        summary.put("equipe", equipe);
+        return summary;
     }
 
     public Map<String, Object> getById(String id) {
@@ -196,7 +224,7 @@ public class TourneeService {
         Tournee tournee = tourneeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tournee introuvable."));
 
-        validateCollecteCanJoinTournee(collecteId, tournee.getId());
+        validateCollecteCanJoinTournee(collecteId, tournee);
         if (!tournee.getCollecteIds().contains(collecteId)) {
             tournee.getCollecteIds().add(collecteId);
         }
@@ -249,6 +277,7 @@ public class TourneeService {
         if (tournee.getStatus() == null || !ALLOWED_STATUSES.contains(normalizeStatus(tournee.getStatus()))) {
             throw new BusinessException("Statut de tournee invalide.");
         }
+
         if (tournee.getPlannedStartTime() == null) {
             throw new BusinessException("La date de debut de la tournee est obligatoire.");
         }
@@ -258,8 +287,19 @@ public class TourneeService {
         if (!tournee.getPlannedEndTime().isAfter(tournee.getPlannedStartTime())) {
             throw new BusinessException("La date de fin doit etre apres la date de debut.");
         }
+
+        if (tournee.getAffectations() != null) {
+            for (Affectation aff : tournee.getAffectations()) {
+                if (aff.getStartTime().isBefore(tournee.getPlannedStartTime()) ||
+                    aff.getEndTime().isAfter(tournee.getPlannedEndTime())) {
+                    throw new BusinessException("L'affectation de " + aff.getCibleId() + 
+                        " doit être comprise entre le début et la fin de la tournée.");
+                }
+            }
+        }
+
         for (String collecteId : tournee.getCollecteIds()) {
-            validateCollecteCanJoinTournee(collecteId, currentTourneeId);
+            validateCollecteCanJoinTournee(collecteId, tournee);
         }
     }
 
@@ -272,9 +312,21 @@ public class TourneeService {
         }
     }
 
-    private void validateCollecteCanJoinTournee(String collecteId, String currentTourneeId) {
+    private void validateCollecteCanJoinTournee(String collecteId, Tournee tournee) {
         Collecte collecte = collecteRepository.findById(collecteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Collecte introuvable: " + collecteId));
+
+        // Check if collecte date is within tour range
+        if (collecte.getDatePrevue() != null) {
+            LocalDateTime start = tournee.getPlannedStartTime();
+            LocalDateTime end = tournee.getPlannedEndTime();
+            if (collecte.getDatePrevue().isBefore(start.toLocalDate()) ||
+                collecte.getDatePrevue().isAfter(end.toLocalDate())) {
+                throw new BusinessException("La collecte \"" + collecte.getName() + 
+                    "\" doit avoir une date comprise entre le début (" + start.toLocalDate() + 
+                    ") et la fin (" + end.toLocalDate() + ") de la tournée.");
+            }
+        }
 
         if (Set.of("TERMINEE", "ANNULEE").contains(collecte.getStatut())) {
             throw new BusinessException("Une collecte terminee ou annulee ne peut pas etre ajoutee a une tournee.");
@@ -284,8 +336,9 @@ public class TourneeService {
         // A collecte can belong to at most ONE active tournee.
         // This prevents ambiguity regarding which "common/shared" resources the
         // collecte inherits.
+        String tourneeId = tournee.getId();
         boolean alreadyInActiveTournee = tourneeRepository.findAll().stream()
-                .filter(t -> currentTourneeId == null || !t.getId().equals(currentTourneeId))
+                .filter(t -> tourneeId == null || !t.getId().equals(tourneeId))
                 .filter(t -> !Set.of("TERMINEE", "ANNULEE").contains(normalizeStatus(t.getStatus())))
                 .anyMatch(t -> t.getCollecteIds() != null && t.getCollecteIds().contains(collecteId));
 
@@ -313,7 +366,23 @@ public class TourneeService {
         List<Map<String, Object>> collecteDetails = buildCollecteDetails(tournee.getCollecteIds(),
                 tournee.getAffectations());
         item.put("collectes", collecteDetails);
-        item.put("equipe", buildEquipeForTournee(collecteDetails));
+
+        List<Map<String, String>> equipe = buildEquipeForTournee(collecteDetails);
+        // Add direct human assignments from tournee
+        if (tournee.getAffectations() != null) {
+            for (Affectation aff : tournee.getAffectations()) {
+                if ("HUMAIN".equals(aff.getTypeCible())) {
+                    userRepository.findById(aff.getCibleId()).ifPresent(user -> {
+                        String idStr = user.getId();
+                        if (equipe.stream().noneMatch(m -> m.get("id").equals(idStr))) {
+                            equipe.add(toEquipeMember(user));
+                        }
+                    });
+                }
+            }
+        }
+
+        item.put("equipe", equipe);
         item.put("affectations", resourceAllocationService.enrichAssignments(tournee.getAffectations()));
         return item;
     }

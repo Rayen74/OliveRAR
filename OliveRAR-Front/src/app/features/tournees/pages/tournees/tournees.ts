@@ -249,6 +249,16 @@ throw new Error('Method not implemented.');
 
     const isUser = this.dropdownUsers.some(u => u.id === raw.cibleId);
     
+    const tourStart = this.tourneeForm.get('plannedStartTime')?.value;
+    const tourEnd = this.tourneeForm.get('plannedEndTime')?.value;
+
+    if (tourStart && tourEnd) {
+      if (raw.startTime < tourStart || raw.endTime > tourEnd) {
+        this.showToast('L\'affectation doit être comprise dans le créneau de la tournée.', 'error');
+        return;
+      }
+    }
+
     const newAssignment: Affectation = {
       cibleId: raw.cibleId,
       typeCible: isUser ? 'HUMAIN' : 'MACHINE',
@@ -345,15 +355,19 @@ throw new Error('Method not implemented.');
       ? this.tourneeApi.update(this.editingId, payload)
       : this.tourneeApi.create(payload);
 
-    request$.pipe(finalize(() => (this.isSubmitting = false))).subscribe({
+    request$.subscribe({
       next: (response) => {
+        this.isSubmitting = false;
         if (response.success) {
           this.showToast(response.message, 'success');
           this.cancelForm();
           this.loadTournees();
         }
       },
-      error: (err) => this.showToast(err?.error?.message ?? 'Une erreur est survenue.', 'error')
+      error: (err) => {
+        this.isSubmitting = false;
+        this.showToast(err?.error?.message ?? 'Une erreur est survenue.', 'error');
+      }
     });
   }
 
@@ -449,6 +463,16 @@ throw new Error('Method not implemented.');
       return;
     }
     
+    const tourStart = this.tourneeForm.get('plannedStartTime')?.value;
+    const tourEnd = this.tourneeForm.get('plannedEndTime')?.value;
+
+    if (tourStart && tourEnd) {
+      if (raw.startTime < tourStart || raw.endTime > tourEnd) {
+        this.showToast('L\'affectation doit être comprise dans le créneau de la tournée.', 'error');
+        return;
+      }
+    }
+    
     this.specificAssignments.push({
       cibleId: raw.cibleId,
       typeCible: 'MACHINE',
@@ -497,7 +521,19 @@ throw new Error('Method not implemented.');
   isCollecteEligible(collecte: Collecte): boolean {
     const statutReservation = (collecte.statut ?? '').toUpperCase();
     const belongsToAnotherTournee = !!collecte.tourneeId && collecte.tourneeId !== this.editingId;
-    return !belongsToAnotherTournee && !['TERMINEE', 'ANNULEE'].includes(statutReservation);
+    
+    // Check date range
+    const tourneeStart = this.tourneeForm.get('plannedStartTime')?.value;
+    const tourneeEnd = this.tourneeForm.get('plannedEndTime')?.value;
+    let dateInRange = true;
+    if (tourneeStart && tourneeEnd && collecte.datePrevue) {
+      const tourStartStr = tourneeStart.split('T')[0];
+      const tourEndStr = tourneeEnd.split('T')[0];
+      const collDateStr = collecte.datePrevue.toString();
+      dateInRange = collDateStr >= tourStartStr && collDateStr <= tourEndStr;
+    }
+
+    return !belongsToAnotherTournee && !['TERMINEE', 'ANNULEE'].includes(statutReservation) && dateInRange;
   }
 
   collecteIneligibilityReason(collecte: Collecte): string {
@@ -508,7 +544,30 @@ throw new Error('Method not implemented.');
     if (statutReservation === 'TERMINEE' || statutReservation === 'ANNULEE') {
       return `La collecte ${collecte.name} est ${this.formatStatus(statutReservation).toLowerCase()} et ne peut pas être ajoutée à une tournée.`;
     }
+
+    // Check date range for specific reason
+    const tourneeStart = this.tourneeForm.get('plannedStartTime')?.value;
+    const tourneeEnd = this.tourneeForm.get('plannedEndTime')?.value;
+    if (tourneeStart && tourneeEnd && collecte.datePrevue) {
+      const tourStartStr = tourneeStart.split('T')[0];
+      const tourEndStr = tourneeEnd.split('T')[0];
+      const collDateStr = collecte.datePrevue.toString();
+      if (collDateStr < tourStartStr || collDateStr > tourEndStr) {
+        return `La date de la collecte (${collDateStr}) est hors du créneau de la tournée (${tourStartStr} à ${tourEndStr}).`;
+      }
+    }
+
     return 'Cette collecte ne peut pas être ajoutée à la tournée.';
+  }
+
+  getMachineAffectations(affectations: Affectation[]): Affectation[] {
+    if (!affectations) return [];
+    return affectations.filter(a => a.typeCible !== 'HUMAIN');
+  }
+
+  getHumanAffectations(affectations: Affectation[]): Affectation[] {
+    if (!affectations) return [];
+    return affectations.filter(a => a.typeCible === 'HUMAIN');
   }
 
   resourceLabel(cibleId: string, assignment?: any): string {

@@ -1,205 +1,319 @@
-<div class="flex min-h-screen bg-[#fcfbf9]">
+<div class="flex min-h-screen bg-earth-bg">
   <app-sidebar></app-sidebar>
 
-  <main class="flex-1 p-4 lg:p-8" *ngIf="collectesData$ | async as data">
-    <div class="max-w-7xl mx-auto">
-      <!-- Header -->
-      <header class="mb-6">
-        <h1 class="text-4xl font-black text-stone-900 tracking-tight">Mes Collectes</h1>
-        <p class="text-stone-500 mt-2 font-medium">Assignations directes par verger et suivi terrain.</p>
-      </header>
+  <main class="flex-1 p-4 lg:p-8">
+    <!-- Header -->
+    <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between max-w-7xl mx-auto">
+      <div>
+        <h1 class="text-2xl font-bold text-earth-text">Mes Collectes de Récolte</h1>
+        <p class="text-xs text-earth-muted mt-0.5 font-normal">Gérez vos récoltes et validez les présences terrain.</p>
+      </div>
+    </header>
 
-      <!-- Filter Form -->
-      <form [formGroup]="filterForm" class="mb-10 flex flex-wrap items-center gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-        <div class="flex items-center gap-2 text-sm font-medium text-stone-700">
-          <span class="material-symbols-outlined text-stone-400">filter_list</span> Filtrer par :
+    <div class="max-w-7xl mx-auto" *ngIf="collectesData$ | async as data; else loading">
+      <!-- Filter Bar -->
+      <form [formGroup]="filterForm" class="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-earth-border bg-white p-3 shadow-sm">
+        <div class="flex items-center gap-2 text-xs font-medium text-earth-text">
+          <span class="material-symbols-outlined text-earth-muted text-sm">filter_list</span> Filtrer :
         </div>
         
         <select
           formControlName="searchStatut"
           (change)="onFilterChange()"
-          class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 outline-none focus:border-[#4a7c2c] focus:ring-1 focus:ring-[#4a7c2c]"
+          class="rounded-lg border border-earth-border bg-earth-bg/50 px-3 py-1.5 text-xs text-earth-text outline-none focus:border-olive-500 focus:ring-1 focus:ring-olive-500 font-normal"
         >
           <option value="">Tous les statuts</option>
-          <option value="EN_ATTENTE">En attente</option>
+          <option value="PLANIFIEE">Planifiée</option>
           <option value="EN_COURS">En cours</option>
           <option value="TERMINEE">Terminée</option>
           <option value="ANNULEE">Annulée</option>
         </select>
       </form>
 
-      <!-- Loading State -->
-      <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20">
-        <div class="w-12 h-12 border-4 border-stone-200 border-t-[#4a7c2c] rounded-full animate-spin mb-4"></div>
-        <p class="text-stone-400 font-medium">Chargement de vos collectes...</p>
-      </div>
-
       <!-- Empty State -->
-      <div *ngIf="!isLoading && (!data.items || data.items.length === 0)" class="bg-white rounded-[2.5rem] p-12 text-center border border-stone-100 shadow-sm">
-        <div class="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-6">
-          <span class="material-symbols-outlined text-stone-300 text-4xl">inventory_2</span>
+      <div *ngIf="!isLoading && (!data.items || data.items.length === 0)" class="bg-white rounded-xl p-10 text-center border border-earth-border shadow-sm">
+        <div class="w-12 h-12 bg-earth-bg rounded-full flex items-center justify-center mx-auto mb-3">
+          <span class="material-symbols-outlined text-earth-muted text-2xl">assignment_late</span>
         </div>
-        <h3 class="text-xl font-bold text-stone-800">Aucune collecte assignée</h3>
-        <p class="text-stone-500 mt-2 max-w-md mx-auto">
-          Vous n'avez pas encore de collectes assignées pour aujourd'hui.
-        </p>
+        <h3 class="text-lg font-bold text-earth-text">Aucune mission</h3>
+        <p class="text-earth-muted mt-1 text-sm font-normal">Aucune collecte assignée pour le moment.</p>
       </div>
 
       <!-- Collectes Grid -->
       <div *ngIf="!isLoading && data.items && data.items.length > 0" class="tours-grid">
-        <div *ngFor="let collecte of data.items" class="tour-card">
-          <div class="flex justify-between items-start mb-6">
-            <span class="statut-badge" [ngClass]="'statut-' + collecte.statut.toLowerCase()">
-              {{ collecte.statut }}
+        <div *ngFor="let collecte of data.items" class="tour-card flex flex-col p-4">
+          <div class="flex justify-between items-start mb-3">
+            <span class="statut-badge text-[10px] py-0.5 px-2 font-bold" [ngClass]="'statut-' + collecte.statut.toLowerCase().replace('_', '-')">
+              {{ formatStatut(collecte.statut) }}
             </span>
-            <span class="text-stone-400 text-xs font-bold">{{ collecte.datePrevue | date:'dd MMM yyyy' }}</span>
+            <div class="flex items-center gap-1 text-earth-muted text-[10px] font-normal">
+              <span class="material-symbols-outlined text-[12px]">calendar_today</span>
+              {{ collecte.datePrevue | date:'dd/MM/yyyy' }}
+            </div>
           </div>
 
-          <h3 class="text-xl font-black text-stone-900 mb-1">{{ collecte.vergerNom }}</h3>
-          <p class="text-stone-400 text-xs font-bold mb-4 flex items-center gap-1">
-            <span class="material-symbols-outlined text-sm">location_on</span>
-            {{ collecte.localisation }}
-          </p>
+          <div class="mb-3">
+            <h3 class="text-base font-bold text-earth-text line-clamp-1">{{ collecte.vergerNom }}</h3>
+            <p class="text-earth-muted text-[11px] flex items-center gap-1 mt-0.5 font-normal">
+              <span class="material-symbols-outlined text-[12px]">location_on</span>
+              {{ collecte.localisation }}
+            </p>
+          </div>
           
-          <div class="space-y-3 mb-8">
-            <div class="flex items-center gap-3 text-stone-600 text-sm">
-              <span class="material-symbols-outlined text-stone-400 text-lg">route</span>
-              <span class="font-bold">{{ collecte.tourneeName || 'Hors Tournée' }}</span>
+          <div class="space-y-1.5 mb-4 flex-grow">
+            <div class="flex items-center gap-2 text-earth-text text-xs font-normal">
+              <span class="material-symbols-outlined text-earth-muted text-sm">route</span>
+              <span class="truncate">{{ collecte.tourneeName || 'Directe' }}</span>
             </div>
-            <div class="flex items-center gap-3 text-stone-600 text-sm">
-              <span class="material-symbols-outlined text-stone-400 text-lg">group</span>
-              <span>{{ getWorkerCount(collecte) }} ouvriers assignés</span>
+            <div class="flex items-center gap-2 text-earth-text text-xs font-normal">
+              <span class="material-symbols-outlined text-earth-muted text-sm">group</span>
+              <span>{{ getWorkerCount(collecte) }} ouvriers</span>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <button (click)="openHarvestModal(collecte)" class="action-btn btn-primary">
-              <span class="material-symbols-outlined text-lg">inventory_2</span>
-              Récolte
+          <div class="grid grid-cols-2 gap-2 pt-3 border-t border-earth-bg">
+            <button (click)="openHarvestModal(collecte)" class="action-btn btn-primary text-xs py-2">
+              <span class="material-symbols-outlined text-sm">monitoring</span> Saisie
             </button>
-            <button (click)="downloadReport(collecte)" class="action-btn btn-secondary">
-              <span class="material-symbols-outlined text-lg">description</span>
-              Rapport
+            <button (click)="downloadReport(collecte)" class="action-btn btn-secondary text-xs py-2">
+              <span class="material-symbols-outlined text-sm">file_download</span> Rapport
             </button>
           </div>
         </div>
       </div>
-
       
-      <!-- Pagination Controls -->
-      <div *ngIf="!isLoading && data.items.length > 0" class="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
-        <p class="text-sm text-stone-500 font-medium">Page <span class="font-bold text-stone-900">{{ currentPage + 1 }}</span> sur {{ totalPages }} — {{ totalElements }} au total</p>
+      <!-- Pagination -->
+      <div *ngIf="!isLoading && data.items && data.items.length > 0" class="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <p class="text-xs text-earth-muted font-normal">Page {{ currentPage + 1 }} sur {{ totalPages }}</p>
         <div class="flex items-center gap-2">
-          <button (click)="previousPage()" [disabled]="currentPage === 0" class="inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-50">
+          <button (click)="previousPage()" [disabled]="currentPage === 0" class="h-8 w-8 flex items-center justify-center rounded-lg border border-earth-border bg-white transition-colors hover:bg-earth-bg disabled:opacity-50">
             <span class="material-symbols-outlined text-sm">chevron_left</span>
-            Précédent
           </button>
-          <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1" class="inline-flex items-center gap-1 rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-600 transition-colors hover:bg-stone-50 disabled:opacity-50">
-            Suivant
+          <button (click)="nextPage()" [disabled]="currentPage >= totalPages - 1" class="h-8 w-8 flex items-center justify-center rounded-lg border border-earth-border bg-white transition-colors hover:bg-earth-bg disabled:opacity-50">
             <span class="material-symbols-outlined text-sm">chevron_right</span>
           </button>
         </div>
       </div>
     </div>
+
+    <ng-template #loading>
+      <div class="flex flex-col items-center justify-center py-20 text-earth-muted">
+        <div class="w-8 h-8 border-3 border-earth-border border-t-olive-600 rounded-full animate-spin mb-3"></div>
+        <p class="text-sm font-medium">Chargement...</p>
+      </div>
+    </ng-template>
   </main>
 </div>
 
 <!-- Modal Récolte -->
-<div *ngIf="showModal" class="modal-overlay">
-  <div class="modal-content p-8">
-    <div class="flex justify-between items-center mb-8">
-      <div>
-        <h2 class="text-2xl font-black text-stone-900">Enregistrer la Récolte</h2>
-        <p class="text-sm text-stone-500">{{ selectedCollecte?.vergerNom }} ({{ selectedCollecte?.name }})</p>
-      </div>
-      <button (click)="closeModal()" class="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center hover:bg-stone-100 transition-colors">
-        <span class="material-symbols-outlined text-stone-600">close</span>
-      </button>
-    </div>
-
-    <!-- Tabs/Steps -->
-    <div *ngIf="steps" class="flex gap-4 mb-8">
-      <button *ngFor="let step of steps" 
-              (click)="activeStep = step"
-              [class.bg-[#4a7c2c]]="activeStep === step"
-              [class.text-white]="activeStep === step"
-              class="flex-1 py-2 rounded-xl text-sm font-bold transition-all border border-stone-100">
-        {{ step }}
-      </button>
-    </div>
-
-    <!-- Step 1: Production -->
-    <div *ngIf="activeStep === 'Production'" class="space-y-6">
-      <div class="bg-stone-50 p-6 rounded-3xl">
-        <label class="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Quantité récoltée (Kg)</label>
-        <div class="flex items-center gap-4">
-          <input type="number" [(ngModel)]="harvestData.quantiteOliveKg" 
-                 class="flex-1 bg-white border-2 border-stone-100 rounded-2xl px-4 py-3 text-2xl font-black text-[#4a7c2c] focus:border-[#4a7c2c] outline-none"
-                 placeholder="0.00">
-          <span class="text-xl font-bold text-stone-400">KG</span>
+<div *ngIf="showModal" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm overflow-hidden">
+  <div class="w-full max-w-3xl rounded-[1.5rem] border border-earth-border bg-white shadow-2xl animate-[fadeIn_.3s_ease-out] flex flex-col max-h-[85vh]">
+    <!-- Modal Header -->
+    <div class="sticky top-0 bg-white px-6 pt-6 pb-3 z-10 rounded-t-[1.5rem] border-b border-earth-bg">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-earth-text leading-tight">Enregistrement Terrain</h2>
+          <p class="text-xs text-earth-muted font-normal">{{ selectedCollecte?.vergerNom }} • {{ selectedCollecte?.datePrevue | date:'dd/MM/yyyy' }}</p>
         </div>
+        <button (click)="closeModal()" class="w-8 h-8 rounded-lg bg-earth-bg flex items-center justify-center hover:bg-earth-border transition-colors">
+          <span class="material-symbols-outlined text-earth-text text-xl">close</span>
+        </button>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Notes globales</label>
-        <textarea [(ngModel)]="harvestData.notesGlobales" 
-                  class="w-full bg-stone-50 border-2 border-transparent rounded-2xl p-4 min-h-[120px] focus:bg-white focus:border-stone-100 outline-none transition-all"
-                  placeholder="Incidents, météo, remarques particulières..."></textarea>
+
+      <!-- Steps -->
+      <div class="flex p-1 bg-earth-bg rounded-lg mb-1">
+        <button *ngFor="let step of steps" 
+                (click)="activeStep = step"
+                [class.bg-white]="activeStep === step"
+                [class.shadow-sm]="activeStep === step"
+                [class.text-olive-700]="activeStep === step"
+                class="flex-1 py-1.5 rounded-md text-xs font-semibold transition-all text-earth-muted hover:text-earth-text">
+          {{ step }}
+        </button>
       </div>
     </div>
 
-    <!-- Step 2: Attendance -->
-    <div *ngIf="activeStep === 'Présences'" class="space-y-4">
-      <div class="attendance-row border-b border-stone-50 pb-2 mb-2">
-        <span class="text-xs font-bold text-stone-400 uppercase">Ouvrier</span>
-        <span class="text-xs font-bold text-stone-400 uppercase text-center">Heure</span>
-        <span class="text-xs font-bold text-stone-400 uppercase text-right">Statut</span>
-      </div>
-      <div *ngFor="let worker of (harvestData.attendance || [])" class="attendance-row">
-        <span class="font-bold text-stone-800 text-sm">{{ worker.workerName }}</span>
-        <input type="time" [(ngModel)]="worker.heureTime" class="bg-stone-50 border-none rounded-lg p-1 text-xs outline-none">
-        <div class="flex justify-end gap-1">
-          <button (click)="worker.statut = AttendanceStatus.PRESENT" [class.active]="worker.statut === AttendanceStatus.PRESENT" class="presence-btn border-green-50 text-green-600">P</button>
-          <button (click)="worker.statut = AttendanceStatus.ABSENT" [class.active]="worker.statut === AttendanceStatus.ABSENT" class="presence-btn absence-btn border-red-50 text-red-600">A</button>
-          <button (click)="worker.statut = AttendanceStatus.RETARD" [class.active]="worker.statut === AttendanceStatus.RETARD" class="presence-btn retard-btn border-amber-50 text-amber-500">R</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Step 3: Material -->
-    <div *ngIf="activeStep === 'Matériel'" class="space-y-4">
-      <div *ngFor="let check of harvestData.resourceChecks" class="bg-stone-50 p-6 rounded-3xl">
-        <div class="flex justify-between items-center mb-4">
-          <h4 class="font-black text-stone-800">{{ check.label }}</h4>
-          <span [class.text-green-600]="isCheckOk(check)" [class.text-red-600]="!isCheckOk(check)" class="text-xs font-bold">
-            {{ isCheckOk(check) ? 'OPÉRATIONNEL' : 'INCOMPLET' }}
-          </span>
-        </div>
-        <div class="space-y-2">
-          <div *ngFor="let item of check.items" class="checklist-item" [class.checked]="item.checked">
-            <span class="text-sm font-medium" [class.text-stone-400]="item.checked">{{ item.label }}</span>
-            <input type="checkbox" [(ngModel)]="item.checked">
+    <!-- Modal Body -->
+    <div class="p-6 overflow-y-auto flex-grow">
+      <!-- Step 1: Production -->
+      <div *ngIf="activeStep === 'Production'" class="space-y-4">
+        <div class="bg-olive-50 p-5 rounded-xl border border-olive-100">
+          <label class="block text-[10px] font-bold text-olive-700 uppercase tracking-wider mb-2">Quantité Récoltée</label>
+          <div class="relative">
+            <input type="number" [(ngModel)]="harvestData.quantiteOliveKg" 
+                   class="w-full bg-white border border-olive-200 rounded-xl px-4 py-3 text-2xl font-bold text-olive-900 focus:border-olive-500 outline-none transition-colors"
+                   placeholder="0.00">
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-lg font-bold text-olive-400">KG</span>
           </div>
         </div>
-        <div class="mt-4" *ngIf="!isCheckOk(check)">
-          <input type="text" [(ngModel)]="check.noteIncident" 
-                 class="w-full bg-white border border-red-100 rounded-xl px-3 py-2 text-xs text-red-600 outline-none"
-                 placeholder="Décrire le problème...">
+        
+        <div>
+          <label class="block text-xs font-semibold text-earth-text mb-1.5">Observations terrain</label>
+          <textarea [(ngModel)]="harvestData.notesGlobales" 
+                    class="w-full border border-earth-border rounded-xl p-3 min-h-[100px] focus:border-olive-500 outline-none transition-all text-sm font-normal"
+                    placeholder="Météo, incidents..."></textarea>
+        </div>
+
+        <!-- Verger Issue Part -->
+        <div class="pt-2">
+          <button (click)="openVergerSignalement()" class="w-full py-2.5 px-4 rounded-xl border border-harvest-200 bg-harvest-50 text-harvest-700 text-xs font-bold flex items-center justify-center gap-2 hover:bg-harvest-100 transition-colors">
+            <span class="material-symbols-outlined text-sm">report_problem</span>
+            Signaler un problème au verger
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Attendance -->
+      <div *ngIf="activeStep === 'Présences'" class="space-y-3">
+        <div class="flex justify-between items-center px-2 py-1.5 bg-earth-bg rounded-lg text-[10px] font-bold text-earth-muted uppercase tracking-wider">
+          <span class="flex-grow pl-1">Ouvrier</span>
+          <span class="w-[80px] text-center">Heure</span>
+          <span class="w-[120px] text-right pr-2">Statut</span>
+        </div>
+        
+        <div class="space-y-1">
+          <div *ngFor="let worker of (harvestData.attendance || [])" class="flex items-center gap-2 p-2 rounded-lg bg-white border border-earth-bg hover:border-earth-border transition-colors">
+            <span class="flex-grow font-semibold text-earth-text text-xs truncate">{{ worker.workerName }}</span>
+            <input type="time" [(ngModel)]="worker.heureTime" 
+                   class="w-[75px] bg-earth-bg border-none rounded px-1 py-1 text-[11px] font-medium outline-none">
+            <div class="flex gap-1">
+              <button (click)="worker.statut = AttendanceStatus.PRESENT" 
+                      [class.bg-green-600]="worker.statut === AttendanceStatus.PRESENT" 
+                      [class.text-white]="worker.statut === AttendanceStatus.PRESENT" 
+                      class="h-6 w-6 rounded flex items-center justify-center text-[10px] font-bold border border-earth-border transition-all">P</button>
+              <button (click)="worker.statut = AttendanceStatus.ABSENT" 
+                      [class.bg-red-600]="worker.statut === AttendanceStatus.ABSENT" 
+                      [class.text-white]="worker.statut === AttendanceStatus.ABSENT" 
+                      class="h-6 w-6 rounded flex items-center justify-center text-[10px] font-bold border border-earth-border transition-all">A</button>
+              <button (click)="worker.statut = AttendanceStatus.RETARD" 
+                      [class.bg-orange-500]="worker.statut === AttendanceStatus.RETARD" 
+                      [class.text-white]="worker.statut === AttendanceStatus.RETARD" 
+                      class="h-6 w-6 rounded flex items-center justify-center text-[10px] font-bold border border-earth-border transition-all">R</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Material -->
+      <div *ngIf="activeStep === 'Matériel'" class="space-y-4">
+        <div *ngFor="let check of harvestData.resourceChecks" class="border border-earth-border p-4 rounded-xl bg-white shadow-sm">
+          <div class="flex flex-col gap-4">
+            <div class="flex justify-between items-start">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-olive-600 text-xl">precision_manufacturing</span>
+                <div>
+                  <h4 class="font-bold text-earth-text text-sm">{{ check.label }}</h4>
+                </div>
+              </div>
+              
+              <!-- Signalement Shortcut -->
+              <button (click)="openSignalement(check)" class="flex items-center gap-1 text-harvest-600 hover:text-harvest-700 transition-colors">
+                <span class="material-symbols-outlined text-sm">report_problem</span>
+                <span class="text-[10px] font-bold uppercase">Signaler</span>
+              </button>
+            </div>
+
+            <!-- Unit Status Selector (Backend Enums) -->
+            <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5 p-1 bg-earth-bg rounded-xl">
+              <button (click)="onUnitStatusChange(check, UniteStatut.DISPONIBLE)"
+                      [class.status-active-disponible]="check.statutGlobal === UniteStatut.DISPONIBLE"
+                      class="status-pill">
+                {{ formatUnitStatus(UniteStatut.DISPONIBLE) }}
+              </button>
+              <button (click)="onUnitStatusChange(check, UniteStatut.AFFECTE)"
+                      [class.status-active-affecte]="check.statutGlobal === UniteStatut.AFFECTE"
+                      class="status-pill">
+                {{ formatUnitStatus(UniteStatut.AFFECTE) }}
+              </button>
+              <button (click)="onUnitStatusChange(check, UniteStatut.EN_MAINTENANCE)"
+                      [class.status-active-maintenance]="check.statutGlobal === UniteStatut.EN_MAINTENANCE"
+                      class="status-pill">
+                {{ formatUnitStatus(UniteStatut.EN_MAINTENANCE) }}
+              </button>
+              <button (click)="onUnitStatusChange(check, UniteStatut.EN_PANNE)"
+                      [class.status-active-panne]="check.statutGlobal === UniteStatut.EN_PANNE"
+                      class="status-pill">
+                {{ formatUnitStatus(UniteStatut.EN_PANNE) }}
+              </button>
+              <button (click)="onUnitStatusChange(check, UniteStatut.HORS_SERVICE)"
+                      [class.status-active-hs]="check.statutGlobal === UniteStatut.HORS_SERVICE"
+                      class="status-pill">
+                {{ formatUnitStatus(UniteStatut.HORS_SERVICE) }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Footer -->
-    <div class="mt-10 pt-6 border-t border-stone-50 flex gap-4">
-      <button (click)="closeModal()" class="flex-1 py-3 rounded-2xl font-bold text-stone-400 hover:bg-stone-50 transition-colors">
+    <!-- Modal Footer -->
+    <div class="sticky bottom-0 bg-white p-5 rounded-b-[1.5rem] border-t border-earth-bg flex gap-3">
+      <button (click)="closeModal()" class="flex-1 py-3 rounded-lg font-bold text-xs text-earth-muted hover:bg-earth-bg transition-colors">
         Annuler
       </button>
-      <button (click)="saveHarvest()" [disabled]="isSubmitting" class="flex-[2] py-3 rounded-2xl bg-[#4a7c2c] text-white font-bold shadow-lg shadow-green-900/20 hover:bg-[#3d6624] disabled:opacity-50 transition-all">
-        <span *ngIf="!isSubmitting">Finaliser & Enregistrer</span>
-        <span *ngIf="isSubmitting" class="flex items-center justify-center gap-2">
-          <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-          Traitement...
-        </span>
+      <button (click)="saveHarvest()" [disabled]="isSubmitting" class="flex-[2] py-3 rounded-lg bg-olive-600 text-white font-bold text-xs shadow-lg shadow-olive-900/10 hover:bg-olive-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+        <span *ngIf="!isSubmitting">Enregistrer</span>
+        <div *ngIf="isSubmitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- Modal Signalement Rapid -->
+<div *ngIf="showSignalementModal" class="fixed inset-0 z-[11000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-md">
+  <div class="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl animate-[fadeIn_.3s_ease-out]">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-earth-text flex items-center gap-2">
+        <span class="material-symbols-outlined text-harvest-600">report</span>
+        {{ signalementType === 'MACHINE' ? 'Signalement Matériel' : 'Signalement Verger' }}
+      </h3>
+      <button (click)="showSignalementModal = false" class="text-earth-muted hover:text-earth-text">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form [formGroup]="signalementForm" (ngSubmit)="submitSignalement()" class="space-y-4">
+      <div *ngIf="signalementType === 'MACHINE'">
+        <label class="block text-xs font-bold text-earth-muted uppercase mb-1.5">Unité concernée</label>
+        <div class="p-2 bg-earth-bg rounded-lg text-sm font-medium text-earth-text">
+          {{ selectedResourceForSignalement?.label }}
+        </div>
+      </div>
+
+      <div *ngIf="signalementType === 'VERGER'">
+        <label class="block text-xs font-bold text-earth-muted uppercase mb-1.5">Verger concerné</label>
+        <div class="p-2 bg-earth-bg rounded-lg text-sm font-medium text-earth-text">
+          {{ selectedCollecte?.vergerNom }}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-earth-muted uppercase mb-1.5">Type d'incident</label>
+        <select formControlName="issueType" class="w-full border border-earth-border rounded-xl p-2.5 text-sm outline-none focus:border-olive-500">
+          <option value="PANNE_MATERIELLE" *ngIf="signalementType === 'MACHINE'">Panne matérielle</option>
+          <option value="ENTRETIEN_REQUIS" *ngIf="signalementType === 'MACHINE'">Entretien requis</option>
+          <option value="MALADIE_OU_PARASITE" *ngIf="signalementType === 'VERGER'">Maladie ou Parasite</option>
+          <option value="PROBLEME_IRRIGATION" *ngIf="signalementType === 'VERGER'">Problème d'irrigation</option>
+          <option value="DEGATS_CLIMATIQUES" *ngIf="signalementType === 'VERGER'">Dégâts climatiques</option>
+          <option value="AUTRE">Autre</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-earth-muted uppercase mb-1.5">Description</label>
+        <textarea formControlName="description" 
+                  class="w-full border border-earth-border rounded-xl p-3 min-h-[100px] text-sm focus:border-olive-500 outline-none transition-all"
+                  placeholder="Décrivez le problème rencontré..."></textarea>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="button" (click)="showSignalementModal = false" class="flex-1 py-2.5 rounded-lg font-bold text-sm text-earth-muted hover:bg-earth-bg transition-colors">
+          Annuler
+        </button>
+        <button type="submit" class="flex-[2] py-2.5 rounded-lg bg-harvest-600 text-white font-bold text-sm hover:bg-harvest-700 transition-all">
+          Envoyer le signalement
+        </button>
+      </div>
+    </form>
   </div>
 </div>

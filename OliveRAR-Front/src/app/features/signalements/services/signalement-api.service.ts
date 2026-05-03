@@ -15,4 +15,12 @@ export class SignalementApiService {
       map((response) => response.data ?? [])
     );
   }
+
+  create(payload: Signalement): Observable<{ success: boolean; data: Signalement }> {
+    return this.http.post<{ success: boolean; data: Signalement }>(this.apiUrl, payload);
+  }
+
+  updateStatus(id: string, status: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/status`, null, { params: { status } });
+  }
 }

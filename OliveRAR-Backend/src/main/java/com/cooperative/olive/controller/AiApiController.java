@@ -1,20 +1,15 @@
 package com.cooperative.olive.controller;
 
-import com.cooperative.olive.dao.AlertRepository;
-import com.cooperative.olive.dao.CollecteRepository;
-import com.cooperative.olive.dao.TourneeRepository;
-import com.cooperative.olive.dao.UserRepository;
-import com.cooperative.olive.dao.VergerRepository;
-import com.cooperative.olive.entity.Alert;
-import com.cooperative.olive.entity.Collecte;
-import com.cooperative.olive.entity.Tournee;
-import com.cooperative.olive.entity.Verger;
-import com.cooperative.olive.entity.User;
+import com.cooperative.olive.dao.*;
+import com.cooperative.olive.entity.*;
+import com.cooperative.olive.repository.VergerIssueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -34,6 +29,7 @@ public class AiApiController {
     private final CollecteRepository collecteRepository;
     private final AlertRepository   alertRepository;
     private final UserRepository    userRepository;
+    private final VergerIssueRepository vergerIssueRepository;
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -46,6 +42,7 @@ public class AiApiController {
                 .filter(t -> !"ANNULEE".equalsIgnoreCase(t.getStatus()))
                 .map(t -> {
                     Map<String, Object> map = new HashMap<>();
+                    map.put("id", t.getId());
                     map.put("nom", safe(t.getName()));
                     map.put("statut", safe(t.getStatus()));
                     map.put("debut", t.getPlannedStartTime() != null ? t.getPlannedStartTime().format(DATE_FMT) : "Non défini");
@@ -59,6 +56,7 @@ public class AiApiController {
         List<Map<String, Object>> vergers = vergerRepository.findAll().stream()
                 .map(v -> {
                     Map<String, Object> map = new HashMap<>();
+                    map.put("id", v.getId());
                     map.put("nom", safe(v.getNom()));
                     map.put("localisation", safe(v.getLocalisation()));
                     map.put("statut", safe(v.getStatut()));
@@ -94,6 +92,7 @@ public class AiApiController {
                 .filter(c -> statut == null || statut.equalsIgnoreCase(c.getStatut()))
                 .map(c -> {
                     Map<String, Object> map = new HashMap<>();
+                    map.put("id", c.getId());
                     map.put("nom", safe(c.getName()));
                     map.put("verger", resolveVergerNom(c.getVergerId()));
                     map.put("localisation", resolveVergerLocalisation(c.getVergerId()));
@@ -118,6 +117,40 @@ public class AiApiController {
         return result;
     }
 
+    @GetMapping("/issues")
+    public Map<String, Object> getIssues() {
+        List<VergerIssue> all = vergerIssueRepository.findByDeletedFalse();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime oneWeekAgo = now.minus(7, ChronoUnit.DAYS);
+
+        List<Map<String, Object>> issues = all.stream()
+                .map(i -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", i.getId());
+                    map.put("verger", resolveVergerNom(i.getVergerId()));
+                    map.put("type", safe(i.getType()));
+                    map.put("description", safe(i.getDescription()));
+                    map.put("gravite", safe(i.getGravite()));
+                    map.put("statut", safe(i.getStatut()));
+                    map.put("date", i.getDateSignalement() != null ? i.getDateSignalement().format(DATE_FMT) : "Inconnue");
+                    map.put("signalePar", resolveUserFullName(i.getSignalePar()));
+                    map.put("cetteSemaine", i.getDateSignalement() != null && i.getDateSignalement().isAfter(oneWeekAgo));
+                    return map;
+                })
+                .collect(Collectors.toList());
+
+        long critiques = issues.stream().filter(i -> "CRITIQUE".equalsIgnoreCase((String)i.get("gravite"))).count();
+        long cetteSemaine = issues.stream().filter(i -> Boolean.TRUE.equals(i.get("cetteSemaine"))).count();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", issues.size());
+        result.put("critiques", critiques);
+        result.put("cetteSemaine", cetteSemaine);
+        result.put("resume", String.format("%d problèmes signalés, dont %d critiques. %d signalés cette semaine.", issues.size(), critiques, cetteSemaine));
+        result.put("issues", issues);
+        return result;
+    }
+
     @GetMapping("/alertes")
     public Map<String, Object> getAlertes(
             @RequestParam(required = false, defaultValue = "false") boolean toutesLesAlertes) {
@@ -128,6 +161,7 @@ public class AiApiController {
                 .filter(a -> toutesLesAlertes || !a.isLu())
                 .map(a -> {
                     Map<String, Object> map = new HashMap<>();
+                    map.put("id", a.getId());
                     map.put("type", safe(a.getType()));
                     map.put("description", safe(a.getDescription()));
                     map.put("verger", safe(a.getNomVerger()));

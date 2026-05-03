@@ -129,6 +129,10 @@ export const routes: Routes = [
         path: 'profile',
         loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
       },
+      {
+        path: 'calendrier',
+        loadComponent: () => import('./features/collectes/pages/collecte-calendar/collecte-calendar').then((m) => m.CollecteCalendarComponent)
+      },
       { path: '', redirectTo: 'tournees', pathMatch: 'full' },
     ]
   },

@@ -181,7 +181,7 @@ public class UniteService {
     }
 
     public Unite changerStatut(String id, String nouveauStatutStr, String note) {
-        currentUserService.requireRole(Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_COOPERATIVE);
+        currentUserService.requireRole(Role.RESPONSABLE_LOGISTIQUE, Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_CHEF_RECOLTE);
         Unite unite = uniteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Unité introuvable."));
         UniteStatut nouveauStatut;
@@ -189,10 +189,6 @@ public class UniteService {
             nouveauStatut = UniteStatut.valueOf(nouveauStatutStr.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new BusinessException("Statut invalide : " + nouveauStatutStr);
-        }
-        if (!unite.getStatut().peutTransitionnerVers(nouveauStatut)) {
-            throw new BusinessException(
-                    "Transition interdite : " + unite.getStatut().name() + " → " + nouveauStatut.name());
         }
         String ancienStatut = unite.getStatut().name();
         unite.setStatut(nouveauStatut);

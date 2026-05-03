@@ -191,6 +191,28 @@ public class CollecteService {
                 id, collecte.getName(), java.util.Map.of());
     }
 
+    public void markAsTermineeByTourId(String tourId) {
+        if (tourId == null || tourId.isBlank()) return;
+        
+        Tournee tournee = tourneeRepository.findById(tourId).orElse(null);
+        if (tournee != null && tournee.getCollecteIds() != null) {
+            for (String collecteId : tournee.getCollecteIds()) {
+                collecteRepository.findById(collecteId).ifPresent(c -> {
+                    if (!"TERMINEE".equals(c.getStatut())) {
+                        c.setStatut("TERMINEE");
+                        c.setUpdatedAt(LocalDateTime.now());
+                        collecteRepository.save(c);
+                        
+                        activiteService.enregistrerPourUtilisateurCourant(
+                            ActiviteType.COLLECTE_MODIFIEE, "COLLECTE",
+                            "Collecte \"" + c.getName() + "\" terminée (Récolte terrain validée).",
+                            c.getId(), c.getName(), java.util.Map.of("statut", "TERMINEE"));
+                    }
+                });
+            }
+        }
+    }
+
     private void validateCollecte(Collecte collecte) {
         if (collecte.getName() == null || collecte.getName().isBlank()) {
             throw new BusinessException("Le nom de la collecte est obligatoire.");

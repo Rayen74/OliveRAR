@@ -20,7 +20,7 @@ public class RecolteController {
     private final RecolteService recolteService;
 
     @PostMapping
-    @PreAuthorize("hasRole('CHEF_RECOLTE')")
+    @PreAuthorize("hasRole('RESPONSABLE_CHEF_RECOLTE')")
     public ResponseEntity<Recolte> saveRecolte(@RequestBody Recolte recolte) {
         return ResponseEntity.ok(recolteService.save(recolte));
     }
@@ -34,13 +34,12 @@ public class RecolteController {
 
     @GetMapping("/tour/{tourId}/report")
     public ResponseEntity<byte[]> getReport(@PathVariable String tourId) throws IOException {
-        String html = recolteService.generateReportHtml(tourId);
-        byte[] contents = html.getBytes();
+        byte[] contents = recolteService.generateReportPdf(tourId);
         
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.TEXT_HTML);
-        String filename = "rapport_tournee_" + tourId + ".html";
-        headers.setContentDispositionFormData(filename, filename);
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        String filename = "rapport_recolte_" + tourId + ".pdf";
+        headers.setContentDispositionFormData("attachment", filename);
         headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
         
         return new ResponseEntity<>(contents, headers, HttpStatus.OK);

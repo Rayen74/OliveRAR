@@ -27,7 +27,7 @@ export class RecolteService {
         const downloadUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = downloadUrl;
-        link.download = `rapport_tournee_${tourId}.html`;
+        link.download = `rapport_recolte_${tourId}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

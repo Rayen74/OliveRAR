@@ -21,7 +21,7 @@ public class Recolte {
     @Id
     private String id;
     
-    @Indexed(unique = true)
+    @Indexed(unique = true, sparse = true)
     private String tourId; // Référence à la tournée
     
     private String chefId; // ID du Responsable Collecte (pour filtrage RBAC)
@@ -61,14 +61,8 @@ public class Recolte {
         private String label;
         @Builder.Default
         private List<ChecklistItem> items = new ArrayList<>();
-        private CheckStatus statutGlobal; // Enum: OK, PROBLEME
+        private UniteStatut statutGlobal; // Enum: DISPONIBLE, AFFECTE, EN_MAINTENANCE, EN_PANNE, HORS_SERVICE
         private String noteIncident;
-
-        public void calculerStatut() {
-            this.statutGlobal = items.stream().allMatch(ChecklistItem::isChecked) 
-                                ? CheckStatus.OK 
-                                : CheckStatus.PROBLEME;
-        }
     }
 
     @Data

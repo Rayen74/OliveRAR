@@ -37,13 +37,13 @@ public class SignalementService {
     }
 
     public Signalement create(Signalement signalement) {
-        currentUserService.requireRole(Role.AGRICULTEUR, Role.RESPONSABLE_COOPERATIVE);
+        currentUserService.requireRole(Role.AGRICULTEUR, Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_CHEF_RECOLTE);
 
         Verger verger = vergerRepository.findById(signalement.getVergerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Verger introuvable."));
 
         String currentUserId = currentUserService.getRequiredCurrentUser().getId();
-        currentUserService.requireOwnerOrRole(verger.getAgriculteurId(), Role.RESPONSABLE_COOPERATIVE);
+        currentUserService.requireOwnerOrRole(verger.getAgriculteurId(), Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_CHEF_RECOLTE);
 
         signalement.setId(null);
         signalement.setCreatedBy(currentUserId);

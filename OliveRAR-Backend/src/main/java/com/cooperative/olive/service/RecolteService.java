@@ -39,18 +39,26 @@ public class RecolteService {
         }
 
         // Check if tour exists
+        if (recolte.getTourId() == null || recolte.getTourId().isEmpty()) {
+            throw new BusinessException("L'ID de la tournée est obligatoire.");
+        }
+
         tourneeRepository.findById(recolte.getTourId())
                 .orElseThrow(() -> new ResourceNotFoundException("Tournée introuvable."));
         
-        // Calculate global statuses for resource checks
-        if (recolte.getResourceChecks() != null) {
-            recolte.getResourceChecks().forEach(Recolte.ResourceCheck::calculerStatut);
+        // Handle existing recolte for this tour if ID is not provided
+        if (recolte.getId() == null) {
+            recolteRepository.findByTourId(recolte.getTourId()).ifPresent(existing -> {
+                recolte.setId(existing.getId());
+            });
         }
 
         recolte.setChefId(currentUser.getId());
         recolte.setDateEnregistrement(LocalDateTime.now());
         
-        return recolteRepository.save(recolte);
+        Recolte saved = recolteRepository.save(recolte);
+        collecteService.markAsTermineeByTourId(saved.getTourId());
+        return saved;
     }
 
     public Recolte getByTourId(String tourId) {
@@ -102,5 +110,24 @@ public class RecolteService {
         Template template = handlebars.compile("report");
 
         return template.apply(context);
+    }
+
+    public byte[] generateReportPdf(String tourId) throws IOException {
+        String html = generateReportHtml(tourId);
+        System.out.println("--- GENERATED HTML FOR PDF ---");
+        System.out.println(html);
+        System.out.println("-------------------------------");
+        
+        try (java.io.ByteArrayOutputStream os = new java.io.ByteArrayOutputStream()) {
+            com.openhtmltopdf.pdfboxout.PdfRendererBuilder builder = new com.openhtmltopdf.pdfboxout.PdfRendererBuilder();
+            builder.useFastMode();
+            builder.withHtmlContent(html, "/");
+            builder.toStream(os);
+            builder.run();
+            return os.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the full stack trace to the console
+            throw new IOException("Erreur lors de la génération du PDF: " + e.getMessage(), e);
+        }
     }
 }
