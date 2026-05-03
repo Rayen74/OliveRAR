@@ -12,10 +12,14 @@ export const responsableCooperativeGuard: CanActivateFn = () => {
     return true;
   }
 
-  if (authService.getConnectedUser()?.role === Role.RESPONSABLE_COOPERATIVE) {
+  const user = authService.getConnectedUser();
+  const userRole = user?.role as string;
+  
+  if (userRole === 'RESPONSABLE_COOPERATIVE' || userRole === Role.RESPONSABLE_COOPERATIVE) {
     return true;
   }
 
+  console.warn('ResponsableCooperativeGuard: Access denied for role', userRole);
   router.navigate(['/login']);
   return false;
 };

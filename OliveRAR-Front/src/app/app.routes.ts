@@ -28,6 +28,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/pages/dashboard/dashboard').then((m) => m.DashboardComponent)
       },
       {
+        path: 'vergers',
+        loadComponent: () => import('./features/dashboard/pages/vergers-map/vergers-map').then((m) => m.VergersMapComponent)
+      },
+      {
         path: 'users',
         loadComponent: () => import('./features/users/pages/users/users').then((m) => m.UsersComponent)
       },
@@ -97,6 +101,10 @@ export const routes: Routes = [
         path: 'communaute',
         loadComponent: () => import('./features/communaute/pages/communaute/communaute').then((m) => m.CommunauteComponent)
       },
+      {
+        path: 'activites',
+        loadComponent: () => import('./features/activites/pages/activite-list/activite-list').then((m) => m.ActiviteListComponent)
+      },
       { path: '', redirectTo: 'vergers', pathMatch: 'full' }
     ]
   },
@@ -147,6 +155,10 @@ export const routes: Routes = [
       {
         path: 'profile',
         loadComponent: () => import('./shared/components/profile/profile').then((m) => m.SharedProfileComponent)
+      },
+      {
+        path: 'activites',
+        loadComponent: () => import('./features/activites/pages/activite-list/activite-list').then((m) => m.ActiviteListComponent)
       },
       { path: '', redirectTo: 'tours', pathMatch: 'full' },
     ]

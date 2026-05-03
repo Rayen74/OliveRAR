@@ -1,0 +1,117 @@
+<div class="flex min-h-screen items-stretch bg-earth-bg">
+    <app-sidebar></app-sidebar>
+  
+    <main class="flex-1 p-8">
+      <header class="mb-8 flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-earth-text">Carte des vergers</h1>
+          <p class="text-sm text-earth-muted">Localisation géographique des exploitations oléicoles.</p>
+        </div>
+      </header>
+  
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+          <p class="text-sm font-medium uppercase text-earth-muted">Total Vergers</p>
+          <p class="mt-2 text-3xl font-bold text-harvest-600">{{ totalVergers }}</p>
+        </div>
+  
+        <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+          <p class="text-sm font-medium uppercase text-earth-muted">Prêts pour récolte</p>
+          <p class="mt-2 text-3xl font-bold text-alert-500">{{ readyVergers }}</p>
+        </div>
+  
+        <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+          <p class="text-sm font-medium uppercase text-earth-muted">Géolocalisés</p>
+          <p class="mt-2 text-3xl font-bold text-earth-text">{{ locatedVergers }}</p>
+        </div>
+  
+        <div class="rounded-xl border border-earth-border bg-white p-6 shadow-sm">
+          <p class="text-sm font-medium uppercase text-earth-muted">Rendement moyen</p>
+          <p class="mt-2 text-3xl font-bold text-olive-700">{{ averageYield | number:'1.0-1' }} kg</p>
+        </div>
+      </div>
+  
+      <section class="mt-10 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.8fr)] items-stretch">
+        <div class="rounded-3xl border border-earth-border bg-white p-5 shadow-sm flex flex-col">
+          <div class="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 class="text-xl font-semibold text-earth-text">Exploration spatiale</h2>
+              <p class="text-sm text-earth-muted">Sélectionnez un verger pour voir ses détails.</p>
+            </div>
+          </div>
+  
+          <div *ngIf="mapError" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ mapError }}
+          </div>
+  
+          <div *ngIf="loadingVergers" class="flex flex-1 items-center justify-center text-earth-muted py-20">
+            Chargement de la carte...
+          </div>
+  
+          <div class="flex-1" *ngIf="!loadingVergers">
+            <app-verger-map [markers]="mapMarkers" [interactive]="false"
+              [selectedMarkerId]="selectedVerger?.id || selectedVerger?.nom || null" [mapHeight]="430"
+              emptyMessage="Aucun verger avec coordonnées valides n'est disponible."
+              (markerSelected)="onMarkerSelected($event)">
+            </app-verger-map>
+          </div>
+        </div>
+  
+        <aside class="rounded-3xl border border-earth-border bg-white p-5 shadow-sm flex flex-col">
+          <div class="space-y-4">
+            <div class="relative">
+              <select *ngIf="!loadingVergers && vergers.length > 0" [ngModel]="selectedVerger?.id || ''"
+                (change)="onVergerChange($event)"
+                class="w-full rounded-2xl border border-earth-border bg-earth-bg px-4 py-3.5 text-sm font-medium text-earth-text outline-none focus:border-olive-500 transition-all appearance-none cursor-pointer">
+                <option value="" disabled selected hidden>Sélectionner un verger</option>
+                <option *ngFor="let v of vergers" [value]="v.id">
+                  {{ v.nom }} {{ v.localisation ? '· ' + v.localisation : '' }}
+                </option>
+              </select>
+              <span *ngIf="!loadingVergers && vergers.length > 0"
+                class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-earth-muted">
+                unfold_more
+              </span>
+            </div>
+  
+            <div class="rounded-2xl border border-earth-border bg-earth-bg/70 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-xs uppercase tracking-[0.18em] text-earth-muted">Verger sélectionné</p>
+                  <h3 class="mt-1 truncate text-lg font-semibold text-earth-text">
+                    {{ selectedVerger?.nom || 'Aucun verger sélectionné' }}
+                  </h3>
+                </div>
+              </div>
+            </div>
+          </div>
+  
+          <div *ngIf="selectedVerger; else emptySelection" class="mt-4 space-y-3">
+            <div
+              class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-x-3 gap-y-2 rounded-2xl border border-earth-border bg-earth-bg px-4 py-3 text-sm">
+              <span class="text-earth-muted">Localisation</span>
+              <span class="text-right text-earth-text truncate">{{ selectedVerger.localisation || 'Non renseignée' }}</span>
+  
+              <span class="text-earth-muted">Arbres</span>
+              <span class="text-right text-earth-text truncate">{{ selectedVerger.nombreArbres }}</span>
+  
+              <span class="text-earth-muted">Superficie</span>
+              <span class="text-right text-earth-text truncate">{{ selectedVerger.superficie }} ha</span>
+  
+              <span class="text-earth-muted">Type d'olive</span>
+              <span class="text-right text-earth-text truncate">{{ selectedVerger.typeOlive || 'N/A' }}</span>
+  
+              <span class="text-earth-muted">Rendement</span>
+              <span class="text-right text-earth-text truncate">{{ selectedVerger.rendementEstime }} kg</span>
+            </div>
+          </div>
+  
+          <ng-template #emptySelection>
+            <div class="mt-4 rounded-2xl border border-dashed border-earth-border px-4 py-10 text-center text-earth-muted">
+              Sélectionnez un verger.
+            </div>
+          </ng-template>
+        </aside>
+      </section>
+    </main>
+  </div>

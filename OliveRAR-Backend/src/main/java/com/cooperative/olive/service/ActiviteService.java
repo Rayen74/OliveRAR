@@ -98,7 +98,12 @@ public class ActiviteService {
             int page,
             int size
     ) {
-        currentUserService.requireRole(Role.RESPONSABLE_COOPERATIVE, Role.RESPONSABLE_LOGISTIQUE);
+        currentUserService.requireRole(
+                Role.RESPONSABLE_COOPERATIVE,
+                Role.RESPONSABLE_LOGISTIQUE,
+                Role.RESPONSABLE_CHEF_RECOLTE,
+                Role.AGRICULTEUR
+        );
         var currentUser = currentUserService.getRequiredCurrentUser();
         boolean isAdmin = currentUser.getRole() == Role.RESPONSABLE_COOPERATIVE;
 

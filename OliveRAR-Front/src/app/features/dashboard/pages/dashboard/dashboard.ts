@@ -1,50 +1,37 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, delay, filter, take } from 'rxjs';
 import { SidebarComponent } from '../../../../shared/components/sidebar/sidebar';
-import { VergerApiService, Verger } from '../../../../shared/services/verger-api.service';
-import { VergerMapComponent, VergerMapMarker } from '../../../../shared/components/verger-map/verger-map';
+import { DashboardApiService } from '../../../../shared/services/dashboard-api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { Subject, filter, take, delay } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, SidebarComponent, VergerMapComponent],
+  imports: [CommonModule, FormsModule, SidebarComponent],
   templateUrl: './dashboard.html'
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  vergers: Verger[] = [];
-  selectedVerger: Verger | null = null;
-  loadingVergers = false;
-  mapError = '';
-
-  // Stats
-  totalVergers = 0;
-  readyVergers = 0;
-  locatedVergers = 0;
-  averageYield = 0;
-  mapMarkers: VergerMapMarker[] = [];
+  kpis: any = null;
+  loading = false;
+  error = '';
+  selectedPeriod = 'month';
 
   private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private readonly vergerApi: VergerApiService,
+    private readonly dashboardApi: DashboardApiService,
     private readonly cdr: ChangeDetectorRef,
     private readonly authService: AuthService
-  ) { }
+  ) {}
 
   ngOnInit(): void {
-    // Approche Senior : Nous attendons que la session soit restauree (sessionReady$).
-    // Le 'delay(0)' est crucial : il repousse l'execution au prochain cycle de detection d'Angular.
-    // Cela evite l'erreur NG0100 (ExpressionChangedAfterItHasBeenChecked) lors du rechargement.
-    this.authService.sessionReady$.pipe(
-      filter(ready => !!ready),
-      delay(0), // Decalage technique pour stabiliser l'affichage
-      take(1)   // On s'arrete des que c'est pret (une seule fois)
-    ).subscribe(() => {
-      this.loadVergers();
-    });
+    this.authService.sessionReady$
+      .pipe(filter((ready) => !!ready), delay(0), take(1))
+      .subscribe(() => {
+        this.loadKPIs();
+      });
   }
 
   ngOnDestroy(): void {
@@ -52,75 +39,133 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  onMarkerSelected(marker: VergerMapMarker): void {
-    this.selectedVerger = this.vergers.find((verger) => (verger.id || verger.nom) === marker.id) ?? null;
-    this.cdr.markForCheck();
-  }
-
-  onVergerChange(event: Event): void {
-    const target = event.target as HTMLSelectElement;
-    const selectedId = target.value;
-    this.selectedVerger = this.vergers.find(v => v.id === selectedId) || null;
-    this.cdr.markForCheck();
-  }
-
-  private loadVergers(): void {
-    this.loadingVergers = true;
-    this.mapError = '';
+  loadKPIs(): void {
+    this.loading = true;
+    this.error = '';
     this.cdr.markForCheck();
 
-    this.vergerApi.getAll().subscribe({
-      next: (vergers) => {
-        // Use setTimeout to ensure we are in a clean cycle
-        setTimeout(() => {
-          this.vergers = vergers;
-          if (this.vergers.length > 0) {
-            this.selectedVerger = this.vergers[0];
-          } else {
-            this.selectedVerger = null;
-          }
-          this.calculateStats();
-          this.loadingVergers = false;
-          this.cdr.markForCheck();
-          this.cdr.detectChanges(); // Final sync
-        });
+    this.dashboardApi.getCooperativeKPIs(this.selectedPeriod).subscribe({
+      next: (data) => {
+        this.kpis = data;
+        this.loading = false;
+        this.cdr.markForCheck();
       },
       error: () => {
-        setTimeout(() => {
-          this.loadingVergers = false;
-          this.mapError = 'Impossible de charger les vergers pour la carte.';
-          this.cdr.markForCheck();
-        });
+        this.loading = false;
+        this.error = 'Erreur lors du chargement des indicateurs.';
+        this.cdr.markForCheck();
       }
     });
   }
 
-  private calculateStats(): void {
-    // Approche Senior : On calcule les marqueurs ici au lieu d'utiliser un 'getter' dans le template.
-    // Les getters dynamiques peuvent causer des erreurs NG0100 car ils retournent souvent
-    // une nouvelle reference d'objet a chaque verification.
-    this.mapMarkers = this.vergers
-      .filter((verger) => this.vergerApi.hasValidCoordinates(verger))
-      .map((verger) => ({
-        id: verger.id || verger.nom,
-        title: verger.nom,
-        subtitle: verger.localisation,
-        latitude: verger.latitude,
-        longitude: verger.longitude,
-        statut: verger.statut,
-        typeOlive: verger.typeOlive,
-        rendement: verger.rendementEstime
-      }));
+  onPeriodChange(period: string): void {
+    this.selectedPeriod = period;
+    this.loadKPIs();
+  }
 
-    this.totalVergers = this.vergers.length;
-    this.readyVergers = this.vergers.filter(v => v.statut === 'PRET_POUR_RECOLTE').length;
-    this.locatedVergers = this.mapMarkers.length;
-
-    if (this.vergers.length > 0) {
-      const total = this.vergers.reduce((sum, v) => sum + (v.rendementEstime || 0), 0);
-      this.averageYield = total / this.vergers.length;
-    } else {
-      this.averageYield = 0;
+  getSelectedPeriodLabel(): string {
+    switch (this.selectedPeriod) {
+      case 'day':
+        return "Aujourd'hui";
+      case 'week':
+        return 'Cette semaine';
+      case 'month':
+      default:
+        return 'Ce mois';
     }
+  }
+
+  getTrendSubtitle(): string {
+    switch (this.selectedPeriod) {
+      case 'day':
+        return 'Evolution de la production du jour (kg)';
+      case 'week':
+        return 'Evolution hebdomadaire de la production (kg)';
+      case 'month':
+      default:
+        return 'Evolution mensuelle de la production (kg)';
+    }
+  }
+
+  getTrendLegendLabel(): string {
+    switch (this.selectedPeriod) {
+      case 'day':
+        return 'Production kg / heure';
+      case 'week':
+        return 'Production kg / semaine';
+      case 'month':
+      default:
+        return 'Production kg / mois';
+    }
+  }
+
+  getSeverityColor(severity: string): string {
+    switch (severity) {
+      case 'CRITIQUE':
+        return '#ef4444';
+      case 'MOYENNE':
+        return '#f97316';
+      case 'FAIBLE':
+        return '#eab308';
+      default:
+        return '#6b7280';
+    }
+  }
+
+  getTrendMaxValue(): number {
+    if (!this.kpis?.performance?.harvestTrend?.length) {
+      return 100;
+    }
+
+    const max = Math.max(...this.kpis.performance.harvestTrend.map((t: any) => t.quantity));
+    return max > 0 ? max : 100;
+  }
+
+  getCurvePath(isArea: boolean): string {
+    const trend = this.kpis?.performance?.harvestTrend;
+    if (!trend || trend.length === 0) {
+      return '';
+    }
+
+    const max = this.getTrendMaxValue();
+    const count = trend.length;
+    const stepX = 100 / count;
+
+    const points = trend.map((item: any, i: number) => {
+      const x = i * stepX + stepX / 2;
+      const topPadding = 8;
+      const bottomLine = 100;
+      const usableHeight = bottomLine - topPadding;
+      const y = bottomLine - (item.quantity / max) * usableHeight;
+      return { x, y };
+    });
+
+    let d = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 1; i < points.length; i++) {
+      d += ` L ${points[i].x} ${points[i].y}`;
+    }
+
+    if (isArea) {
+      d += ` L ${points[points.length - 1].x} 100 L ${points[0].x} 100 Z`;
+    }
+
+    return d;
+  }
+
+  getYAxisLabels(): number[] {
+    const max = this.getTrendMaxValue();
+    return [
+      Math.round(max),
+      Math.round(max * 0.75),
+      Math.round(max * 0.5),
+      Math.round(max * 0.25),
+      0
+    ];
+  }
+
+  getActivityUnitLabel(): string {
+    const total = this.kpis?.activity?.total ?? 0;
+    return total > 1 ? 'activités' : 'activité';
   }
 }

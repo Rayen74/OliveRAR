@@ -19,7 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/verger")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('AGRICULTEUR')")
+@PreAuthorize("hasAnyRole('AGRICULTEUR', 'RESPONSABLE_COOPERATIVE')")
 public class VergerController {
 
     private final VergerService vergerService;

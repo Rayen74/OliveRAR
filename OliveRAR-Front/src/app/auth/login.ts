@@ -133,28 +133,34 @@ export class LoginComponent {
 
           // ====================== REDIRECTION SELON LE RÔLE ======================
           let redirectPath = '/login';
+          const userRole = response.user.role as string;
+          
+          console.log('Login successful. User role:', userRole);
 
-          switch (response.user.role) {
-            case Role.RESPONSABLE_COOPERATIVE:
+          switch (userRole) {
+            case 'RESPONSABLE_COOPERATIVE':
               redirectPath = '/responsable/dashboard';
               break;
 
-            case Role.AGRICULTEUR:
+            case 'AGRICULTEUR':
               redirectPath = '/agriculteur/vergers';
               break;
 
-            case Role.RESPONSABLE_LOGISTIQUE:
+            case 'RESPONSABLE_LOGISTIQUE':
               redirectPath = '/responsable-logistique/tournees';
               break;
 
-            case Role.RESPONSABLE_CHEF_RECOLTE:
+            case 'RESPONSABLE_CHEF_RECOLTE':
               redirectPath = '/chef-recolte/tours';
               break;
 
             default:
+              console.warn('Role not recognized:', userRole);
               redirectPath = '/login';
               this.showNotification('Rôle non reconnu.', 'error');
           }
+
+          console.log('Redirecting to:', redirectPath);
 
           // Redirection après le message de succès
           setTimeout(() => {
